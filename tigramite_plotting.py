@@ -29,7 +29,7 @@ from matplotlib.ticker import ScalarFormatter, FormatStrFormatter
 
 from copy import deepcopy
 import os
-import tigramite_estimation
+import tigramite_estimation_beta as tigramite_estimation
 
 
 def par_corr_trafo(cmi):
