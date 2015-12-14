@@ -1,16 +1,16 @@
-TIGRAMITE – TIME SERIES GRAPH BASED MEASURES OF INFORMATION TRANSFER
+# TIGRAMITE – TIME SERIES GRAPH BASED MEASURES OF INFORMATION TRANSFER
 
 Version 2.0 (release date 2016-01-01)
 
 (Python Package)
 
 
-General Notes:
+## General Notes:
 
 Tigramite is a time series analysis python module. With flexibly adaptable scripts it allows to detect and quantify causal dependencies from time series and create high-quality plots of the results.
 
 
-Features:
+## Features:
 
 - Analysis can be performed on one multivariate time series, in sliding windows of one multivariate time series, or an ensemble of multivariate time series
 
@@ -30,7 +30,7 @@ Features:
 
 
 
-References:
+## References:
 
 Runge, J., Heitzig, J., Petoukhov, V., Kurths, J.: Escaping the Curse of Dimensionality in Estimating Multivariate Transfer Entropy, Physical Review Letters, 108, 2012, 258701
 doi:10.1103/PhysRevLett.108.258701
@@ -42,7 +42,7 @@ Runge, J., Petoukhov, V., Kurths, J.: Quantifying the strength and delay of clim
 doi:10.1175/JCLI-D-13-00159.1
 
 
-Required python packages:
+## Required python packages:
 
 numpy, tested with Version 1.6
 scipy, tested with Version 0.9
@@ -52,19 +52,14 @@ basemap (only if plotting on a map is needed)
 mpi4py (optional, necessary for using the parallelized implementation)
 
 
-Installation instructions:
-
-Copy python scripts into one folder.
-
-
-User Agreement:
+## User Agreement:
 
 By downloading TiGraMITe you agree with the following points: The toolbox is provided without any warranty or conditions of any kind. We assume no responsibility for errors or omissions in the results and interpretations following from application the toolbox.
 
 You commit to cite TiGraMITe in your reports or publications if used.
 
 
-License
+## License
 
 Copyright (C) 2012-2016 Jakob Runge
 
