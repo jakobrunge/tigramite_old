@@ -1,7 +1,7 @@
 
 
 import numpy
-import tigramite_estimation as te
+import tigramite_estimation_beta as te
 import tigramite_preprocessing as pp
 import tigramite_plotting 
 
