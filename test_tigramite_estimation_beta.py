@@ -516,7 +516,7 @@ class test__get_significance_estimate():
         self.samples = 10000
         self.sig_lev = .95
         self.sig_samples = 10000
-        self.T = 500
+        self.T = 1000
         self.decimal = 2
         self.links_coeffs = {0: [],
                              1: [],
@@ -530,8 +530,10 @@ class test__get_significance_estimate():
             res = self.get_fpr(measure, significance='analytic')
             print("%s = %.3f (expected = %.3f)"
                 % (measure, res, 1.-self.sig_lev))
-            numpy.testing.assert_almost_equal(res, 1.-self.sig_lev, 
-                                              decimal=self.decimal)
+            # numpy.testing.assert_almost_equal(res, 1.-self.sig_lev, 
+            #                                   decimal=self.decimal)
+            numpy.testing.assert_allclose(res, 1.-self.sig_lev, 
+                                              rtol=0.1)
 
     def test_shuffle_vs_alpha(self):
         print("\nChecking that shuffle sig_thres equals analytical thres "
