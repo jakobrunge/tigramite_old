@@ -230,7 +230,7 @@ def ordinal_patt_array(array, array_mask, dim=2, step=1, verbosity=0):
     """
 
     import scipy
-    from scipy.misc.common import factorial
+    from scipy.misc import factorial
 
     assert dim > 1
 
@@ -312,7 +312,7 @@ def quantile_bin_array(data, bins=6):
     symb_array = (data.reshape(T, N, 1) >= edges.reshape(1, N, bins)).sum(
         axis=2) - 1
 
-    return symb_array
+    return symb_array.astype('int32')
 
 
 def get_sig_thres(sig_lev, df):

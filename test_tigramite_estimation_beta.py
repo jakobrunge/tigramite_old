@@ -85,16 +85,16 @@ def var_process(parents_neighbors_coeffs, T=1000, use='inv_inno_cov',
 # Test data:
 # VAR process with given parents and neighbors and all coefficients equal
 ##
-coeff = 0.3
-T = 2000
+coeff = 0.6
+T = 10000
 numpy.random.seed(42)
 # True graph
-links_coeffs = {0: [((0, -1), coeff), ((2, -1), coeff), ((1, 0), coeff)],
-                1: [((1, -1), coeff), ((0, -1), coeff),
+links_coeffs = {0: [((0, -1), coeff), ((2, -1), -coeff), ((1, 0), coeff)],
+                1: [((1, -1), coeff), ((0, -1), -coeff),
                     ((0, 0), coeff), ((2, 0), coeff)],
-                2: [((2, -1), coeff), ((1, -1), coeff),
-                    ((0, -2), coeff), ((1, 0), coeff)],
-                3: [((3, -1), 1.*coeff), ((2, -1), .9*coeff),
+                2: [((2, -1), coeff), ((1, -1), -coeff),
+                    ((0, -2), -coeff), ((1, 0), coeff)],
+                3: [((3, -1), 1.*coeff), ((2, -1), -.9*coeff),
                     ((2, -4), -.8*coeff), ((1, -2), -.7*coeff)],
                 }
 
@@ -655,17 +655,17 @@ class test__get_confidence_estimate():
 
 if __name__ == "__main__":
     # unittest.main()
-    # test_pc_algo_all()
-    # test_construct_array()
-    # test_get_lagfunctions()
-    # test_measures()
-    # sig = test__get_significance_estimate()
-    # sig.test_alphas()
-    # sig.test_shuffle_vs_alpha()
-    # conf = test__get_confidence_estimate()
-    # conf.test_shuffle_vs_alpha()
+    test_pc_algo_all()
+    test_construct_array()
+    test_get_lagfunctions()
+    test_measures()
+    sig = test__get_significance_estimate()
+    sig.test_alphas()
+    sig.test_shuffle_vs_alpha()
+    conf = test__get_confidence_estimate()
+    conf.test_shuffle_vs_alpha()
     ####sig.test_shuffle()
 
     # print("All passed!")
-    result = nose.run()
+    # result = nose.run()
 

@@ -32,6 +32,9 @@ import numpy
 #  Import scipy.weave for C++ inline code and other packages
 from scipy import weave, linalg,  special, stats
 
+# import pyximport; pyximport.install()
+# import tigramite_nearest_neighbors
+
 #  Additional imports
 import itertools
 import warnings
@@ -926,6 +929,8 @@ def _construct_array(X, Y, Z, tau_max, data, mask=False,
                 output.append(x)
         return output
 
+    data_type = data.dtype
+
     if mask_type is None:
         mask_type = ['x', 'y', 'z']
 
@@ -969,7 +974,7 @@ def _construct_array(X, Y, Z, tau_max, data, mask=False,
                       [2 for i in range(len(Z))])
 
     # Setup and fill array with lagged time series
-    array = numpy.zeros((dim, T - max_lag))
+    array = numpy.zeros((dim, T - max_lag), dtype = data_type)
     for i, node in enumerate(XYZ):
         var, lag = node
         array[i, :] = data[max_lag + lag: T + lag, var]
@@ -977,7 +982,7 @@ def _construct_array(X, Y, Z, tau_max, data, mask=False,
     if mask:
         # Remove samples with data_mask == 0
         # conditional on which mask_type is used
-        array_mask = numpy.zeros((dim, T - max_lag))
+        array_mask = numpy.zeros((dim, T - max_lag), dtype ='int32')
         for i, node in enumerate(XYZ):
             var, lag = node
             array_mask[i, :] = data_mask[max_lag + lag: T + lag, var]
@@ -1183,7 +1188,7 @@ def _par_corr_trafo(cmi):
 
     # Set negative values to small positive number
     # (zero would be interpreted as non-significant in some functions)
-    if numpy.rank(cmi) == 0:
+    if numpy.ndim(cmi) == 0:
         if cmi < 0.:
             cmi = 1E-8
     else:
@@ -1314,11 +1319,15 @@ def _get_nearest_neighbors(array, xyz, k, standardize=True):
     k_z = numpy.zeros(T, dtype='int32')
 
     code = """
-    int i, j, index=0, t, m, n, d, kxz, kyz, kz, indexfound[T];//
-    double  dz=0., dxyz=0., dx=0., dy=0., eps, epsmax;
-    double dist[T*dim], dxyzarray[k+1];
+    int i, j, index=0, t, m, n, d, kxz, kyz, kz, indexfound[T], dummy[T];
+    double  dz=0., dxyz=0., dx=0., dy=0., dis, eps, epsmax, dxyzarray[k+1];
 
-    // Loop over time
+    // FIXME: Due to a completely strange bug I have to initialize and assign
+    // this never used dummy variable. If I remove it, a segmentation fault 
+    // appears...
+    dummy[0] = .5;
+
+    // Loop over time points
     for(i = 0; i < T; i++){
 
         // Growing cube algorithm: Test if n = #(points in epsilon-
@@ -1326,7 +1335,7 @@ def _get_nearest_neighbors(array, xyz, k, standardize=True):
         // Start with epsilon for which 95% of points are inside the cube
         // for a multivariate Gaussian
         // eps increased by 2 later, also the initial eps
-        eps = 1.*pow( float(k)/float(T), 1./dim);
+        eps = 1.*pow( float(k)/float(T), 1./float(dim));
 
         // n counts the number of neighbors
         n = 0;
@@ -1358,8 +1367,7 @@ def _get_nearest_neighbors(array, xyz, k, standardize=True):
 
             dxyz = 0.;
             for(d = 0; d < dim; d++){
-                dist[d*T + j] = fabs(array[d*T + i] - array[d*T + index]);
-                dxyz = fmax( dist[d*T + j], dxyz);
+                dxyz = fmax( fabs(array[d*T + i] - array[d*T + index]), dxyz);
             }
 
             // Use insertion sort
@@ -1386,36 +1394,35 @@ def _get_nearest_neighbors(array, xyz, k, standardize=True):
         kyz = 0;
         for(j = 0; j < T; j++){
 
-            // X-subspace
-            dx = fabs(array[0*T + i] - array[0*T + j]);
-            for(d = 1; d < dim_x; d++){
-                dist[d*T + j] = fabs(array[d*T + i] - array[d*T + j]);
-                dx = fmax( dist[d*T + j], dx);
-            }
-
-            // Y-subspace
-            dy = fabs(array[dim_x*T + i] - array[dim_x*T + j]);
-            for(d = dim_x; d < dim_x+dim_y; d++){
-                dist[d*T + j] = fabs(array[d*T + i] - array[d*T + j]);
-                dy = fmax( dist[d*T + j], dy);
-            }
-
             // Z-subspace, if empty, dz stays 0
             dz = 0.;
             for(d = dim_x+dim_y; d < dim ; d++){
-                dist[d*T + j] = fabs(array[d*T + i] - array[d*T + j]);
-                dz = fmax( dist[d*T + j], dz);
+                dz = fmax( fabs(array[d*T + i] - array[d*T + j]), dz);
             }
 
             // For no conditions, kz is counted up to T
             if (dz < epsmax){
                 kz += 1;
-                if (dx < epsmax){
-                    kxz += 1;
+
+                // Only now check Y- and X-subspaces
+                // Y-subspace, the loop is only entered for dim_y > 1
+                dy = fabs(array[dim_x*T + i] - array[dim_x*T + j]);
+                for(d = dim_x+1; d < dim_x+dim_y; d++){
+                    dy = fmax( fabs(array[d*T + i] - array[d*T + j]), dy);
                 }
                 if (dy < epsmax){
                     kyz += 1;
                 }
+
+                // X-subspace, the loop is only entered for dim_x > 1
+                dx = fabs(array[0*T + i] - array[0*T + j]);
+                for(d = 1; d < dim_x; d++){
+                    dx = fmax( fabs(array[d*T + i] - array[d*T + j]), dx);
+                }
+                if (dx < epsmax){
+                    kxz += 1;
+                }
+
             }
         }
         // Write to numpy arrays
