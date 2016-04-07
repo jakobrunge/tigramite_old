@@ -85,7 +85,7 @@ def var_process(parents_neighbors_coeffs, T=1000, use='inv_inno_cov',
 # Test data:
 # VAR process with given parents and neighbors and all coefficients equal
 ##
-coeff = 0.6
+coeff = 0.5
 T = 10000
 numpy.random.seed(42)
 # True graph
