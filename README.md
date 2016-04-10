@@ -1,30 +1,28 @@
 # TIGRAMITE – TIME SERIES GRAPH BASED MEASURES OF INFORMATION TRANSFER
 
-Version 2.0 (release date 2016-01-01)
+Version 2.0 beta (release date 2016-04-12)
 
 (Python Package)
 
 
 ## General Notes:
 
-Tigramite is a time series analysis python module. With flexibly adaptable scripts it allows to detect and quantify causal dependencies from time series and create high-quality plots of the results.
+Tigramite is a time series analysis python module. With flexibly adaptable scripts it allows to reconstruct graphical mode from time series, quantify interaction strengths with different measures, and create high-quality plots of the results.
 
 
 ## Features:
 
-- Analysis can be performed on one multivariate time series, in sliding windows of one multivariate time series, or an ensemble of multivariate time series
+- Analysis can be performed on multivariate time series. Further scripts allow sliding windows or ensemble analyses
 
 - Flexible Python framework for custom preprocessing like anomalization, high/lowpass filters, masking of samples (e.g. winter months only), and more
 
 - Different (conditional) measures of association (partial correlation, conditional mutual information with different estimators)
 
-- Estimation either from prescribed graph for testing hypotheses OR from iteratively estimated time series graph
-
 - Fast computation through use of C-code via scipy.weave and fully parallelized script (mpi4py package necessary)
 
-- Significance testing via prescribed threshold or sophisticated shuffle test
+- Significance testing via analytical tests, a prescribed threshold or a shuffle test for conditional mutual information
 
-- Flexible specification of experiment and variable names and units
+- Flexible specification of experiment and variable names and units for plots
 
 - Flexible plotting scripts for publication quality presentation of results
 
