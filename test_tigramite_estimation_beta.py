@@ -45,42 +45,42 @@ def cmi2parcorr_trafo(cmi):
     return numpy.sqrt(1.-numpy.exp(-2.*cmi))
 
 
-def var_process(parents_neighbors_coeffs, T=1000, use='inv_inno_cov',
-                verbosity=0):
+# def var_process(parents_neighbors_coeffs, T=1000, use='inv_inno_cov',
+#                 verbosity=0):
 
-    max_lag = 0
-    for j in parents_neighbors_coeffs.keys():
-        for node, coeff in parents_neighbors_coeffs[j]:
-            i, tau = node[0], -node[1]
-            max_lag = max(max_lag, abs(tau))
-    N = max(parents_neighbors_coeffs.keys()) + 1
-    graph = numpy.zeros((N, N, max_lag))
-    innos = numpy.zeros((N, N))
-    innos[range(N), range(N)] = 1.
-    true_parents_neighbors = {}
-    # print graph.shape
-    for j in parents_neighbors_coeffs.keys():
-        true_parents_neighbors[j] = []
-        for node, coeff in parents_neighbors_coeffs[j]:
-            i, tau = node[0], -node[1]
-            true_parents_neighbors[j].append((i, -tau))
-            if tau == 0:
-                innos[j, i] = innos[i, j] = coeff
-            else:
-                graph[j, i, tau - 1] = coeff
+#     max_lag = 0
+#     for j in parents_neighbors_coeffs.keys():
+#         for node, coeff in parents_neighbors_coeffs[j]:
+#             i, tau = node[0], -node[1]
+#             max_lag = max(max_lag, abs(tau))
+#     N = max(parents_neighbors_coeffs.keys()) + 1
+#     graph = numpy.zeros((N, N, max_lag))
+#     innos = numpy.zeros((N, N))
+#     innos[range(N), range(N)] = 1.
+#     true_parents_neighbors = {}
+#     # print graph.shape
+#     for j in parents_neighbors_coeffs.keys():
+#         true_parents_neighbors[j] = []
+#         for node, coeff in parents_neighbors_coeffs[j]:
+#             i, tau = node[0], -node[1]
+#             true_parents_neighbors[j].append((i, -tau))
+#             if tau == 0:
+#                 innos[j, i] = innos[i, j] = coeff
+#             else:
+#                 graph[j, i, tau - 1] = coeff
 
-    if verbosity > 0:
-        print("VAR graph =\n%s" % str(graph))
-        if use == 'inno_cov':
-            print("\nInnovation Cov =\n%s" % str(innos))
-        elif use == 'inv_inno_cov':
-            print("\nInverse Innovation Cov =\n%s" % str(innos))
+#     if verbosity > 0:
+#         print("VAR graph =\n%s" % str(graph))
+#         if use == 'inno_cov':
+#             print("\nInnovation Cov =\n%s" % str(innos))
+#         elif use == 'inv_inno_cov':
+#             print("\nInverse Innovation Cov =\n%s" % str(innos))
 
-    data = pp.var_network(graph=graph, inv_inno_cov=innos,
-                          inno_cov=innos,
-                          use=use, T=T)
+#     data = pp.var_network(graph=graph, inv_inno_cov=innos,
+#                           inno_cov=innos,
+#                           use=use, T=T)
 
-    return data, true_parents_neighbors
+#     return data, true_parents_neighbors
 ##
 # Test data:
 # VAR process with given parents and neighbors and all coefficients equal
@@ -98,7 +98,7 @@ links_coeffs = {0: [((0, -1), coeff), ((2, -1), -coeff), ((1, 0), coeff)],
                     ((2, -4), -.8*coeff), ((1, -2), -.7*coeff)],
                 }
 
-fulldata, true_parents_neighbors = var_process(links_coeffs, T=T)
+fulldata, true_parents_neighbors = pp.var_process(links_coeffs, T=T)
 T, N = fulldata.shape
 
 # fulldata_mask = numpy.ones(fulldata.shape, dtype='bool')
@@ -280,7 +280,7 @@ def test_get_lagfunctions():
                     3: [],
                     }
     numpy.random.seed(42)
-    data, links = var_process(links_coeffs, T=5000, verbosity=verbosity)
+    data, links = pp.var_process(links_coeffs, T=5000, verbosity=verbosity)
     T, N = data.shape
 
     i = 1
@@ -362,7 +362,7 @@ def test_get_lagfunctions():
                     2: [((2, -1), ay), ((0, 0), syz), ((1, 0), sxy)],
                     }
 
-    data, links = var_process(links_coeffs, T=5000,
+    data, links = pp.var_process(links_coeffs, T=5000,
                               use='inno_cov', verbosity=verbosity)
     T, N = data.shape
 
@@ -383,16 +383,16 @@ def test_get_lagfunctions():
 
 def test_measures():
 
-    measure_params = {'knn': 10, 'rescale_cmi': False}
+    measure_params = {'knn': 10,}
     decimal = 2
-    ax = 0.5
-    ay = 0.6
+    ax = 0.6
+    ay = 0.3
     cxy = .7
     links_coeffs = {0: [((0, -1), ax)],
                     1: [((1, -1), ay), ((0, -1), cxy)],
                     }
     numpy.random.seed(42)
-    data, links = var_process(links_coeffs, T=5000,
+    data, links = pp.var_process(links_coeffs, T=5000,
                               use='inno_cov', verbosity=verbosity)
     T, N = data.shape
 
@@ -417,15 +417,19 @@ def test_measures():
         if measure == 'par_corr':
             print("%s = %.3f (expected = %.3f)"
                   % (measure, res[1], expected_parcorr))
-            numpy.testing.assert_almost_equal(res[1],
-                                              numpy.array([expected_parcorr]),
-                                              decimal=decimal)
+            # numpy.testing.assert_almost_equal(res[1],
+            #                                   numpy.array([expected_parcorr]),
+            #                                   decimal=decimal)
+            numpy.testing.assert_allclose(res[1], expected_parcorr, 
+                                              rtol=0.1)
         elif measure == 'reg':
             print("%s = %.3f (expected = %.3f)"
                   % (measure, res[1], expected_reg))
-            numpy.testing.assert_almost_equal(res[1],
-                                              numpy.array([expected_reg]),
-                                              decimal=decimal)
+            # numpy.testing.assert_almost_equal(res[1],
+            #                                   numpy.array([expected_reg]),
+            #                                   decimal=decimal)
+            numpy.testing.assert_allclose(res[1], expected_reg, 
+                                              rtol=0.1)
         elif (measure == 'cmi_knn'
               or measure == 'cmi_gauss'):
             print("%s = %.3f (expected = %.3f)"
@@ -433,7 +437,8 @@ def test_measures():
             numpy.testing.assert_almost_equal(res[1],
                                               numpy.array([expected_cmi]),
                                               decimal=decimal)
-
+            numpy.testing.assert_allclose(res[1], expected_cmi, 
+                                              rtol=0.1)
     # binning estimator
     symb_data = pp.quantile_bin_array(data, bins=6)
     res = te._calculate_lag_function(
@@ -489,54 +494,61 @@ class test__get_significance_estimate():
         # verbosity=verbosity)
 
     def __init__(self):
-        print("\nChecking significance tests alpha and shuffle")
+        print("\nChecking significance tests analytic and shuffle")
 
-        self.samples = 10000
+        self.samples = 2000
         self.sig_lev = .95
-        self.sig_samples = 10000
-        self.T = 1000
-        self.decimal = 2
-        self.links_coeffs = {0: [],
-                             1: [],
-                             }
+        self.sig_samples = 1000
+        self.T = 500
+        self.rtol = .2
+        self.measure_params = {'knn': 10,}
 
     def test_alphas(self):
         print("\nChecking whether sig_lev %.2f results in " % self.sig_lev +
               "%.2f false positives" % (1. - self.sig_lev))
 
-        for measure in ['par_corr', 'reg']:
-            res = self.get_fpr(measure, significance='analytic')
-            print("%s = %.3f (expected = %.3f)"
-                % (measure, res, 1.-self.sig_lev))
-            # numpy.testing.assert_almost_equal(res, 1.-self.sig_lev, 
-            #                                   decimal=self.decimal)
-            numpy.testing.assert_allclose(res, 1.-self.sig_lev, 
-                                              rtol=0.1)
+        for significance in ['analytic']:  #, 'full_shuffle']:
+            for measure in ['par_corr', 'reg']:
+                res = self.get_fpr(measure, significance=significance)
+                print("%s test for %s has FPR %.3f (expected = %.3f)"
+                    % (significance, measure, res, 1.-self.sig_lev))
+                # numpy.testing.assert_almost_equal(res, 1.-self.sig_lev, 
+                #                                   decimal=self.decimal)
+                numpy.testing.assert_allclose(res, 1.-self.sig_lev, 
+                                                  rtol=self.rtol)
 
     def test_shuffle_vs_alpha(self):
         print("\nChecking that shuffle sig_thres equals analytical thres "
               "for sig_lev = %.2f, sig_samples = %d" % (self.sig_lev, 
                                                         self.sig_samples))
         numpy.random.seed(42)
-        array = numpy.random.randn(2, self.T)
+        # array = numpy.random.randn(2, self.T)
+        links_coeffs = {0: [],
+                        1: [((0, 0), .06)],
+                             }
+        data, links = pp.var_process(links_coeffs, T=self.T,
+                                  use='inno_cov', verbosity=verbosity)
+        array = data.T
         xyz = numpy.array([0, 1])
         for measure in ['par_corr', 'reg', 'cmi_gauss']:
             expected = te._get_estimate(array=array, measure=measure, xyz=xyz,  
                               significance='analytic',
                               sig_samples=self.sig_samples, 
                               sig_lev=self.sig_lev,    
-                              measure_params=None,                          
+                              measure_params=self.measure_params,                          
                               verbosity=0)['sig_thres']
             res = te._get_estimate(array=array, measure=measure, xyz=xyz,    
                               significance='full_shuffle',
                               sig_samples=self.sig_samples,
                               sig_lev=self.sig_lev,
-                              measure_params=None,                          
+                              measure_params=self.measure_params,                          
                               verbosity=0)['sig_thres']
-            print("sig thres for %s = %.3f (expected = %.3f)"
-                  % (measure, res, expected))
-            numpy.testing.assert_almost_equal(res, expected,
-                                              decimal=self.decimal)
+            print("shuffle %.2f sig thres for %s = %.3f (analytic = %.3f)"
+                  % (self.sig_lev, measure, res, expected))
+            numpy.testing.assert_allclose(res, expected, 
+                                              rtol=self.rtol)
+            # numpy.testing.assert_almost_equal(res, expected,
+            #                                   decimal=self.decimal)
 
     def get_fpr(self, measure, significance):
         fpr = numpy.zeros(self.samples)
@@ -550,16 +562,16 @@ class test__get_significance_estimate():
                             data=data,
                             var_x=0, var_y=1,
                             conds_x=None, conds_y=None,
-                            measure_params=None,
+                            measure_params=self.measure_params,
                             tau_max=1,
                             selected_lags=[1],
                             significance=significance,
                             sig_lev=self.sig_lev,
                             sig_samples=self.sig_samples,
                             verbosity=0)
-            fpr[sam] = res['cmi'][1] > res['cmi_sig'][1]
+            fpr[sam] = res['cmi_pval'][1]  # > res['cmi_sig'][1]
 
-        return fpr.mean()
+        return (fpr <= (1.-self.sig_lev)).mean()
 
 
 class test__get_confidence_estimate():
@@ -567,11 +579,11 @@ class test__get_confidence_estimate():
     """Testing the false positive rate for independent processes."""
 
     def __init__(self):
-        print("\nChecking significance tests alpha and shuffle")
+        print("\nChecking confidence tests analytic and shuffle")
 
-        self.conf_lev = .95
-        self.conf_samples = 10000
-        self.T = 2000
+        self.conf_lev = .9
+        self.conf_samples = 1000
+        self.T = 500
         self.decimal = 2
         self.links_coeffs = {0: [],
                              1: [],
@@ -580,10 +592,13 @@ class test__get_confidence_estimate():
         ay = 0.9
         cxy = .7
         links_coeffs = {0: [((0, -1), ax)],
-                        1: [((1, -1), ay), ((0, -1), cxy)],
+                        1: [((1, -1), ay), ((0, -1), -cxy)],
                         }
+        self.rtol = .1
+        self.measure_params = {'knn': 10}
+
         numpy.random.seed(42)
-        data, links = var_process(links_coeffs, T=self.T,
+        data, links = pp.var_process(links_coeffs, T=self.T,
                                   use='inno_cov', verbosity=verbosity)
         self.array, self.xyz = te._construct_array(X=[(0, -1)], Y=[(1, 0)],
                                                    Z=[(0, -2), (1, -1)],
@@ -592,7 +607,7 @@ class test__get_confidence_estimate():
                                                    # .argsort(axis=0).argsort(axis=0)
 
     def test_shuffle_vs_alpha(self):
-        print("\nChecking that bootstrap conf levels equal analytical ones "
+        print("\nChecking that bootstrap conf intervals equal analytical ones "
               "for conf_lev = %.2f, conf_samples = %d" % (self.conf_lev,
                                                           self.conf_samples))
         for measure in ['reg', 'par_corr', 'cmi_gauss']:
@@ -601,7 +616,7 @@ class test__get_confidence_estimate():
                               confidence='analytic',
                               conf_samples=self.conf_samples,
                               conf_lev=self.conf_lev,
-                              measure_params=None,                                                
+                              measure_params=self.measure_params,                                                
                               verbosity=0)
             expected = tmp['conf_lower'], tmp['conf_upper']
 
@@ -609,14 +624,17 @@ class test__get_confidence_estimate():
                               confidence='bootstrap',
                               conf_samples=self.conf_samples,
                               conf_lev=self.conf_lev,
-                              measure_params=None,
+                              measure_params=self.measure_params,
                               verbosity=0)
             res = tmp['conf_lower'], tmp['conf_upper']
 
-            print("%s = (+/- %.3f, %.3f) (expected = (%.3f, %.3f))"
+            print("bootstrap interval for %s = (%.3f, %.3f)  --  analytic interval = (%.3f, %.3f)"
                 % (measure, res[0], res[1], expected[0], expected[1]))
-            numpy.testing.assert_almost_equal(numpy.array([res]), numpy.array([expected]), 
-                                              decimal=self.decimal)
+            # numpy.testing.assert_almost_equal(numpy.array([res]), numpy.array([expected]), 
+            #                                   decimal=self.decimal)
+            numpy.testing.assert_allclose(res, expected, 
+                                              rtol=self.rtol)
+
 
 if __name__ == "__main__":
     # unittest.main()
@@ -627,8 +645,8 @@ if __name__ == "__main__":
     test_get_lagfunctions()
     test_measures()
     sig = test__get_significance_estimate()
-    sig.test_alphas()
     sig.test_shuffle_vs_alpha()
+    sig.test_alphas()
     conf = test__get_confidence_estimate()
     conf.test_shuffle_vs_alpha()
     print("All passed!")
