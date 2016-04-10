@@ -1409,6 +1409,6 @@ def plot_time_series_graph(lagfuncs, sig_thres, var_names, save_name, fig, ax,
             ax.text(pos[tau][0], label_indent_top, r'$t-%s$' %str(max_lag-tau-1), fontsize=label_fontsize,
                          horizontalalignment='center',verticalalignment='top', transform = trans)
 
-    fig.subplots_adjust(left=0.1, right=.9, bottom=.25, top=.9)
+    fig.subplots_adjust(left=0.1, right=.98, bottom=.25, top=.9)
     savestring = os.path.expanduser(save_name)
     pyplot.savefig(savestring)

@@ -192,28 +192,6 @@ def test_pc_algo_all():
             assert_graphs_equal(_get_parent_graph(parents_neighbors),
                                 _get_parent_graph(true_parents_neighbors))
 
-    # unittest.assertDictEqual(parents_neighbors, true_parents_neighbors)
-    # nt.assert_dicts_almost_equal(parents_neighbors, true_parents_neighbors)
-
-
-# def test_pc_algo():
-
-#     for initial_conds in range(1, 4):
-#         print("\n%d==================================== " %initial_conds)
-#         parents_neighbors = te._pc_algo(fulldata, j=0,
-#                 parents_or_neighbors='parents',
-#                 initial_graph=None, all_parents=None,
-#                 tau_min=0, tau_max=4,
-#                 initial_conds=initial_conds, max_conds=6, max_trials=5,
-#                 measure='par_corr',
-#                 significance='alpha', sig_lev=0.995, sig_samples=100,
-#                 fixed_thres=0.015,
-#                 measure_params=measure_params,
-#                 mask=False, mask_type=None, data_mask=numpy.array([0]),
-#                 verbosity=2)
-
-#         nt.assert_items_equal(parents_neighbors,
-            # te._get_parents(true_parents_neighbors[0]))
 
 def test_construct_array():
 
@@ -543,28 +521,22 @@ class test__get_significance_estimate():
         array = numpy.random.randn(2, self.T)
         xyz = numpy.array([0, 1])
         for measure in ['par_corr', 'reg', 'cmi_gauss']:
-            expected = te.get_sig_thres(
-                                        sig_lev=self.sig_lev,
-                                        df=self.T - len(xyz),
-                                        measure=measure, array=array)
-            res = te._get_significance_estimate(
-                array=array, xyz=xyz, significance='shuffle',
-                measure=measure,
-                sig_samples=self.sig_samples, sig_lev=self.sig_lev,
-                fixed_thres=None, measure_params=None,
-                verbosity=0)
-            print("%s = %.3f (expected = %.3f)"
+            expected = te._get_estimate(array=array, measure=measure, xyz=xyz,  
+                              significance='analytic',
+                              sig_samples=self.sig_samples, 
+                              sig_lev=self.sig_lev,    
+                              measure_params=None,                          
+                              verbosity=0)['sig_thres']
+            res = te._get_estimate(array=array, measure=measure, xyz=xyz,    
+                              significance='full_shuffle',
+                              sig_samples=self.sig_samples,
+                              sig_lev=self.sig_lev,
+                              measure_params=None,                          
+                              verbosity=0)['sig_thres']
+            print("sig thres for %s = %.3f (expected = %.3f)"
                   % (measure, res, expected))
             numpy.testing.assert_almost_equal(res, expected,
                                               decimal=self.decimal)
-
-    # def test_shuffle(self):
-    #     for measure in ['reg']:   #, 'par_corr', reg', 'cmi_knn']:
-    #         res = self.get_fpr(measure, significance='shuffle')
-    #         print("%s = %.3f (expected = %.3f)"
-    #             % (measure, res, 1.-self.sig_lev))
-    #         numpy.testing.assert_almost_equal(res, 1.-self.sig_lev,
-    #                                           decimal=self.decimal)
 
     def get_fpr(self, measure, significance):
         fpr = numpy.zeros(self.samples)
@@ -624,37 +596,32 @@ class test__get_confidence_estimate():
               "for conf_lev = %.2f, conf_samples = %d" % (self.conf_lev,
                                                           self.conf_samples))
         for measure in ['reg', 'par_corr', 'cmi_gauss']:
-            value = te._get_estimate(
-                                array=self.array, measure=measure,
-                                xyz=self.xyz,
-                                measure_params=None,
-                                verbosity=0)
-            expected = te._get_confidence_estimate(
-                            array=self.array, xyz=self.xyz,
-                            confidence='analytic',
-                            measure=measure,
-                            value=value,
-                            conf_samples=self.conf_samples,
-                            conf_lev=self.conf_lev,
-                            measure_params=None,
-                            verbosity=0)
 
-            res = te._get_confidence_estimate(
-                            array=self.array, xyz=self.xyz,
-                            confidence='bootstrap',
-                            measure=measure,
-                            value=value,
-                            conf_samples=self.conf_samples,
-                            conf_lev=self.conf_lev,
-                            measure_params=None,
-                            verbosity=0)
-            print("%s = %.3f (+/- %.3f, %.3f) (expected = (%.3f, %.3f))"
-                % (measure, value, res[0], res[1], expected[0], expected[1]))
+            tmp = te._get_estimate(array=self.array, measure=measure, xyz=self.xyz,    
+                              confidence='analytic',
+                              conf_samples=self.conf_samples,
+                              conf_lev=self.conf_lev,
+                              measure_params=None,                                                
+                              verbosity=0)
+            expected = tmp['conf_lower'], tmp['conf_upper']
+
+            tmp = te._get_estimate(array=self.array, measure=measure, xyz=self.xyz, 
+                              confidence='bootstrap',
+                              conf_samples=self.conf_samples,
+                              conf_lev=self.conf_lev,
+                              measure_params=None,
+                              verbosity=0)
+            res = tmp['conf_lower'], tmp['conf_upper']
+
+            print("%s = (+/- %.3f, %.3f) (expected = (%.3f, %.3f))"
+                % (measure, res[0], res[1], expected[0], expected[1]))
             numpy.testing.assert_almost_equal(numpy.array([res]), numpy.array([expected]), 
                                               decimal=self.decimal)
 
 if __name__ == "__main__":
     # unittest.main()
+
+    ## Individual tests
     test_pc_algo_all()
     test_construct_array()
     test_get_lagfunctions()
@@ -664,8 +631,8 @@ if __name__ == "__main__":
     sig.test_shuffle_vs_alpha()
     conf = test__get_confidence_estimate()
     conf.test_shuffle_vs_alpha()
-    ####sig.test_shuffle()
+    print("All passed!")
 
-    # print("All passed!")
+    ## Nose...
     # result = nose.run()
 

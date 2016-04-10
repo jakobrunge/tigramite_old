@@ -30,10 +30,7 @@ Module contains functions for the package tigramite.
 import numpy
 
 #  Import scipy.weave for C++ inline code and other packages
-from scipy import weave, linalg,  special, stats
-
-# import pyximport; pyximport.install()
-# import tigramite_nearest_neighbors
+from scipy import weave, linalg, special, stats, spatial
 
 #  Additional imports
 import itertools
@@ -72,15 +69,15 @@ def _sanity_checks(which='pc_algo',
     if numpy.isnan(data).sum() != 0:
         raise ValueError("NaNs in the data")
 
-    if significance not in ['analytic', 'shuffle', 'fixed']:
+    if significance not in ['analytic', 'full_shuffle', 'fixed']:
         raise ValueError("significance must be one of "
-                         "'analytic', 'shuffle', 'fixed'")
+                         "'analytic', 'full_shuffle', 'fixed'")
     if significance == 'analytic' and (sig_lev < .5 or sig_lev >= 1.):
         raise ValueError("sig_lev = %.2f, " % sig_lev +
                          "but must be between 0.5 and 1")
-    if significance == 'shuffle' and sig_samples*(1.-sig_lev) < 1.:
+    if significance == 'full_shuffle' and sig_samples*sig_lev < 1.:
         raise ValueError("sig_samples*(1.-sig_lev) is %.2f"
-                         % (sig_samples*(1.-sig_lev)) + ", must be >> 1")
+                         % (sig_samples*sig_lev) + ", must be >> 1")
     if significance == 'fixed' and fixed_thres <= 0.:
         raise ValueError("fixed_thres = %.2f, must be > 0" % fixed_thres)
 
@@ -178,7 +175,8 @@ def _sanity_checks(which='pc_algo',
             if (conf_lev < .5 or conf_lev >= 1.):
                 raise ValueError("conf_lev = %.2f, " % conf_lev +
                                  "but must be between 0.5 and 1")
-            if confidence == 'bootstrap' and conf_samples*(1. - conf_lev) / 2. < 1.:
+            if (confidence == 'bootstrap'
+                    and conf_samples*(1. - conf_lev) / 2. < 1.):
                 raise ValueError("conf_samples*(1.-conf_lev)/2 is %.2f"
                                  % (conf_samples*(1.-conf_lev)/2.) +
                                  ", must be >> 1")
@@ -414,7 +412,8 @@ def _pc_algo(data, j,
 
     if verbosity > 1:
         print("\n    " + "-"*60 +
-              "\n    Estimating %s for variable %d :" % (parents_or_neighbors, j)
+              "\n    Estimating %s for variable %d :" % (parents_or_neighbors, 
+                                                         j)
               + "\n    " + "-"*60)
         if initial_parents_neighbors is not None:
             print("    ckecking only nodes %s" % str(nodes_and_estimates.keys()))
@@ -501,7 +500,7 @@ def _pc_algo(data, j,
             conditions.update(sorted_nodes)
 
             if verbosity > 1:
-                if len(sorted_nodes) < 10:
+                if len(sorted_nodes) < 20:
                     print("\n        --> %d nodes for variable %d left:"
                           % (len(sorted_nodes), j))
                     print("             %s     " % (
@@ -762,44 +761,6 @@ def get_lagfunctions(data, selected_variables=None, parents_neighbors=None,
 # Helper functions
 ##
 
-def get_sig_thres(sig_lev, df, measure='par_corr', array=None):
-    """Returns the significance threshold of the pearson correlation
-    coefficient according to a Student's t-distribution with df degrees
-    of freedom.
-
-    One- or two-tailedness should be accounted for by the choice of sig_lev,
-    i.e., 95% two-tailed significance corresponds to sig_lev = 0.975
-
-    :type sig_lev: float
-    :param sig_lev: significance level
-
-    :type df: int
-    :param df: degrees of freedom
-
-    :rtype: float
-    :returns: significance threshold
-    """
-
-    if measure == 'par_corr':
-        thres = stats.t.ppf(
-            sig_lev, df) / numpy.sqrt(df + stats.t.ppf(sig_lev, df) ** 2)
-    elif measure == 'cmi_gauss':
-        thres = stats.t.ppf(
-            sig_lev, df) / numpy.sqrt(df + stats.t.ppf(sig_lev, df) ** 2)
-        thres = _par_corr_to_cmi(thres)
-    elif measure == 'reg':
-        # Here the degrees of freedom are minus one because of the intercept
-        _, coeff_error, resid_error = _estimate_standardized_regression(array)
-        thres = stats.t.ppf(sig_lev, df-1) * coeff_error
-    else:
-        raise ValueError("Analytical significance level only available"
-                         " for measures 'par_corr', 'reg', and 'cmi_gauss'")
-        # thres = stats.t.ppf(
-        #     sig_lev, df) / numpy.sqrt(df + stats.t.ppf(sig_lev, df) ** 2)
-        # thres = -0.5 * numpy.log(1. - thres ** 2)
-
-    return thres
-
 
 def _calculate_lag_function(measure, data, data_mask=None,
                             mask=False,
@@ -835,6 +796,7 @@ def _calculate_lag_function(measure, data, data_mask=None,
     cmi = numpy.zeros(tau_max + 1)
     cmi_sig = numpy.zeros(tau_max + 1)
     cmi_conf = numpy.zeros((tau_max + 1, 2))
+    cmi_pval = numpy.zeros(tau_max + 1)
 
     auto = var_x == var_y
 
@@ -864,6 +826,8 @@ def _calculate_lag_function(measure, data, data_mask=None,
             cmi[tau] = numpy.nan
             cmi_sig[tau] = numpy.nan
             cmi_conf[tau] = numpy.nan
+            cmi_pval[tau] = numpy.nan
+
             if verbosity > 1:
                 print("Only %d overlapping samples for link (%s, %s) "
                       "with tau = %d, setting estimate to NaN"
@@ -871,33 +835,19 @@ def _calculate_lag_function(measure, data, data_mask=None,
                       % (T_eff, var_x, var_y, tau, min_samples))
             continue
 
-        cmi[tau] = _get_estimate(array=array, measure=measure, xyz=xyz,
+        estimate = _get_estimate(array=array, measure=measure, xyz=xyz,
                                  measure_params=measure_params,
+                                 significance=significance,
+                                 sig_samples=sig_samples, sig_lev=sig_lev,
+                                 confidence=confidence,
+                                 conf_samples=conf_samples, conf_lev=conf_lev,
+                                 fixed_thres=fixed_thres,
                                  verbosity=verbosity)
 
-        # Calculate empirical significance level, x and its conditions are
-        # shuffled separately of y with its conditions
-        # if conditions are in both parents, they are randomly
-        # shuffled or not shuffled for each surrogate...
-        if significance:
-            cmi_sig[tau] = _get_significance_estimate(
-                array=array, xyz=xyz, significance=significance,
-                measure=measure,
-                sig_samples=sig_samples, sig_lev=sig_lev,
-                fixed_thres=fixed_thres,
-                measure_params=measure_params,
-                verbosity=verbosity)
-
-        if confidence:
-            cmi_conf[tau] = _get_confidence_estimate(
-                array=array, xyz=xyz,
-                confidence=confidence,
-                value=cmi[tau],
-                measure=measure,
-                conf_samples=conf_samples,
-                conf_lev=conf_lev,
-                measure_params=measure_params,
-                verbosity=verbosity)
+        cmi[tau] = estimate['value']
+        cmi_pval[tau] = estimate['pvalue']
+        cmi_sig[tau] = estimate['sig_thres']
+        cmi_conf[tau] = (estimate['conf_lower'], estimate['conf_upper'])
 
         if verbosity > 1:
             printstr = "            %s (tau=%d) = %.3f" % (measure,
@@ -914,7 +864,8 @@ def _calculate_lag_function(measure, data, data_mask=None,
 
             print(printstr)
 
-    return {'cmi': cmi, 'cmi_sig': cmi_sig, 'cmi_conf': cmi_conf}
+    return {'cmi': cmi, 'cmi_sig': cmi_sig, 
+            'cmi_conf': cmi_conf, 'cmi_pval': cmi_pval}
 
 
 def _construct_array(X, Y, Z, tau_max, data, mask=False,
@@ -1009,43 +960,199 @@ def _construct_array(X, Y, Z, tau_max, data, mask=False,
     return array, xyz
 
 
-def _get_estimate(array, measure, xyz, measure_params, verbosity=0):
-
-    if measure == 'par_corr':
-        return _estimate_partial_correlation(
-            array=numpy.copy(array))
-    elif measure == 'reg':
-        return _estimate_standardized_regression(
-            array=numpy.copy(array), verbosity=verbosity)[0]
-    elif measure == 'cmi_gauss':
-        return _par_corr_to_cmi(_estimate_partial_correlation(
-                                array=numpy.copy(array)))
-    elif measure == 'cmi_knn':
-        return _estimate_cmi_knn(
-            array=numpy.copy(array),
-            k=measure_params['knn'], xyz=xyz)
-    elif measure == 'cmi_symb':
-        return _estimate_cmi_symb(
-            array=numpy.copy(array), xyz=xyz)
-
-
-def _get_significance_estimate(array, xyz, significance, measure,
-                               sig_samples, sig_lev, fixed_thres,
-                               measure_params,
-                               verbosity=0):
-    """Computes significance threshold."""
+def _get_estimate(array, measure, xyz, measure_params, 
+                  significance=False,
+                  sig_samples=1000,
+                  sig_lev=0.95,
+                  fixed_thres=0.1,
+                  confidence=False,
+                  conf_samples=100,
+                  conf_lev=0.9,
+                  verbosity=0):
 
     dim, T = array.shape
 
-    if significance == 'shuffle':
+    # confidence interval is two-sided
+    c_int = (1. - (1. - conf_lev) / 2.)
 
-        x_indices = numpy.where(xyz == 0)[0]
+    if measure == 'par_corr':
+        # Partial correlation and 2-sided p-value
+        val, pval = _estimate_partial_correlation(array=numpy.copy(array))
+
+        # Significance threshold
+        df = T - dim
+        sig_thres = stats.t.ppf(
+            sig_lev, df) / numpy.sqrt(df + stats.t.ppf(sig_lev, df) ** 2)
+
+        # Confidence level
+        value_tdist = val*numpy.sqrt(T-dim) / numpy.sqrt(1.-val**2)
+        conf_lower = (stats.t.ppf(q=1.-c_int, df=T-dim, loc=value_tdist)
+                 / numpy.sqrt(T-dim + stats.t.ppf(q=1.-c_int, df=T-dim,
+                                                  loc=value_tdist)**2))
+        conf_upper = (stats.t.ppf(q=c_int, df=T-dim, loc=value_tdist)
+                 / numpy.sqrt(T-dim + stats.t.ppf(q=c_int, df=T-dim,
+                                                  loc=value_tdist)**2))
+
+    elif measure == 'reg':
+        # Partial regression and 2-sided p-value
+        val, pval, coeff_error, resid_error = _estimate_standardized_regression(
+            array=numpy.copy(array), verbosity=verbosity)
+
+        # Significance threshold
+        # Here the degrees of freedom are minus one because of the intercept
+        df = T - dim
+        sig_thres = stats.t.ppf(sig_lev, df-1) * coeff_error
+
+        # Confidence level
+        conf_lower = (stats.t.ppf(q=1.-c_int, df=T-dim-1,
+                             loc=val/coeff_error) * coeff_error)
+        conf_upper = (stats.t.ppf(q=c_int, df=T-dim-1,
+                             loc=val/coeff_error) * coeff_error)
+
+    elif measure == 'cmi_gauss':
+        tmpval, pval = _estimate_partial_correlation(
+                                array=numpy.copy(array))
+        val =  _par_corr_to_cmi(tmpval)
+
+        # Significance threshold
+        df = T - dim
+        sig_thres = _par_corr_to_cmi(stats.t.ppf(
+            sig_lev, df) / numpy.sqrt(df + stats.t.ppf(sig_lev, df) ** 2))
+        
+        # Confidence level
+        value_tdist = tmpval*numpy.sqrt(T-dim) / numpy.sqrt(1.-tmpval**2)
+        conf_lower = _par_corr_to_cmi((stats.t.ppf(q=1.-c_int, df=T-dim, 
+                                              loc=value_tdist)
+                 / numpy.sqrt(T-dim + stats.t.ppf(q=1.-c_int, df=T-dim,
+                                              loc=value_tdist)**2)))
+        conf_upper = _par_corr_to_cmi((stats.t.ppf(q=c_int, df=T-dim,
+                                              loc=value_tdist)
+                 / numpy.sqrt(T-dim + stats.t.ppf(q=c_int, df=T-dim,
+                                              loc=value_tdist)**2)))
+
+    ##
+    ##  For the non-parametric approaches the significance statistics
+    ##  are optionally computed below
+    ##
+
+    elif measure == 'cmi_knn':
+        if verbosity > 3:
+            print("\tEsimate using knn = %d" % measure_params['knn'])
+        val = _estimate_cmi_knn(
+            array=numpy.copy(array),
+            k=measure_params['knn'], xyz=xyz)
+        pval = None
+        sig_thres = None
+        conf_lower = None
+        conf_upper = None
+
+    elif measure == 'cmi_symb':
+        val = _estimate_cmi_symb(
+            array=numpy.copy(array), xyz=xyz)
+        pval = None
+        sig_thres = None
+        conf_lower = None
+        conf_upper = None   
+
+    else:
+        raise ValueError("Measure not found.")
+
+
+    ##
+    ## If a shuffly-type significance or bootstrap confidence is chosen, 
+    ## the p-values and so on are overwritten
+    ##
+    if significance:
+        if significance == 'analytic':
+            if measure in ['cmi_knn', 'cmi_symb']:
+                raise ValueError("Analytic significance not available for "
+                                 "%s!" % measure )
+            else:
+                pass
+
+        elif 'shuffle' in significance:
+
+            null_dist = _get_shuffle_dist(array=array, 
+                                     xyz=xyz, 
+                                     significance=significance,
+                                     measure=measure,
+                                     sig_samples=sig_samples,
+                                     measure_params=measure_params,
+                                     verbosity=verbosity)
+
+            pval = (null_dist >= val).mean()
+            sig_thres = null_dist[sig_lev*sig_samples]
+
+        elif significance == 'fixed':
+            sig_thres = fixed_thres
+
+    if confidence == 'bootstrap':
+
+        if verbosity > 2:
+            print("            Bootstrap confidence intervals")
+
+        if measure == 'cmi_knn':
+            conf_knn_class = ConfidenceCMIknn(
+                                array=numpy.copy(array),
+                                k=measure_params['knn'], xyz=xyz)
+
+
+        bootdist = numpy.zeros(conf_samples)
+        for sam in range(conf_samples):
+
+            if measure == 'cmi_knn':
+                # For knn a bootstrap would create ties in the data,
+                # therefore here only the k's are bootstrapped,
+                # see Runge PhD thesis
+                bootdist[sam] = conf_knn_class.get_single_estimate()
+
+            else:
+                array_bootstrap = array[:, numpy.random.randint(0, T, T)]
+                if measure == 'par_corr':
+                    bootdist[sam] = _estimate_partial_correlation(
+                        array=array_bootstrap)[0]
+                elif measure == 'cmi_gauss':
+                    bootdist[sam] = _par_corr_to_cmi(
+                        _estimate_partial_correlation(
+                            array=array_bootstrap)[0])
+                elif measure == 'reg':
+                    bootdist[sam] = _estimate_standardized_regression(
+                        array=array_bootstrap)[0]
+                elif measure == 'cmi_symb':
+                    bootdist[sam] = _estimate_cmi_symb(
+                        array=array_bootstrap, xyz=xyz)
+
+        # Sort and get quantile
+        bootdist.sort()
+        conf_lower = bootdist[(1. - c_int) * conf_samples]
+        conf_upper = bootdist[c_int * conf_samples]
+
+
+    return {'value':val, 'pvalue':pval, 
+            'sig_thres':sig_thres, 
+            'conf_lower':conf_lower,
+            'conf_upper':conf_upper}
+
+
+def _get_shuffle_dist(array, xyz, significance, measure,
+                       sig_samples,
+                       measure_params=None,
+                       verbosity=0):
+
+    dim, T = array.shape
+
+    # max_neighbors = max(1, int(max_neighbor_ratio*T))
+    x_indices = numpy.where(xyz == 0)[0]
+    z_indices = numpy.where(xyz == 2)[0]
+
+
+    if significance == 'full_shuffle':
 
         if verbosity > 2:
             print("            Shuffle significance test: jointly shuffling "
                   "indices %s of array" % str(x_indices))
 
-        cmitmp = numpy.zeros(sig_samples)
+        null_dist = numpy.zeros(sig_samples)
         for sam in range(sig_samples):
 
             perm = numpy.random.permutation(T)
@@ -1053,113 +1160,21 @@ def _get_significance_estimate(array, xyz, significance, measure,
             for i in x_indices:
                 array_shuffled[i] = array[i, perm]
 
-            cmitmp[sam] = _get_estimate(array=array_shuffled,
+
+            null_dist[sam] = _get_estimate(array=array_shuffled,
                                         measure=measure, xyz=xyz,
-                                        measure_params=measure_params)
+                                        measure_params=measure_params)['value']
 
         # Sort and get quantile
-        cmitmp.sort()
+        null_dist.sort()
+
         if verbosity > 2:
             print("            ...done!")
-        return cmitmp[sig_lev * sig_samples]
 
-    elif significance == 'analytic':
-        return get_sig_thres(
-            sig_lev, df=T - dim, measure=measure, array=array)
-
-    elif significance == 'fixed':
-        return fixed_thres
-
-
-def _get_confidence_estimate(array, xyz, confidence, measure, value,
-                             conf_samples, conf_lev,
-                             measure_params,
-                             verbosity=0):
-
-    dim, T = array.shape
-
-    # confidence interval is two-sided
-    c_int = (1. - (1. - conf_lev) / 2.)
-
-    if confidence == 'analytic':
-
-        if measure == 'par_corr':
-            value_tdist = value*numpy.sqrt(T-dim) / numpy.sqrt(1.-value**2)
-            lower = (stats.t.ppf(q=1.-c_int, df=T-dim, loc=value_tdist)
-                     / numpy.sqrt(T-dim + stats.t.ppf(q=1.-c_int, df=T-dim,
-                                                      loc=value_tdist)**2))
-            upper = (stats.t.ppf(q=c_int, df=T-dim, loc=value_tdist)
-                     / numpy.sqrt(T-dim + stats.t.ppf(q=c_int, df=T-dim,
-                                                      loc=value_tdist)**2))
-            return (lower, upper)
-
-        elif measure == 'cmi_gauss':
-            value_tdist = (_par_corr_trafo(value)*numpy.sqrt(T-dim)
-                           / numpy.sqrt(1.-_par_corr_trafo(value)**2))
-            lower = (stats.t.ppf(q=1.-c_int, df=T-dim, loc=value_tdist)
-                     / numpy.sqrt(T-dim + stats.t.ppf(q=1.-c_int, df=T-dim,
-                                                      loc=value_tdist)**2))
-            upper = (stats.t.ppf(q=c_int, df=T-dim, loc=value_tdist)
-                     / numpy.sqrt(T-dim + stats.t.ppf(q=c_int, df=T-dim,
-                                                      loc=value_tdist)**2))
-            return (_par_corr_to_cmi(lower), _par_corr_to_cmi(upper))
-
-        elif measure == 'reg':
-            # Here the degrees of freedom are -1 because of the intercept
-            _, coeff_error, resid_error = _estimate_standardized_regression(
-                                              array)
-            lower = (stats.t.ppf(q=1.-c_int, df=T-dim-1,
-                                 loc=value/coeff_error) * coeff_error)
-            upper = (stats.t.ppf(q=c_int, df=T-dim-1,
-                                 loc=value/coeff_error) * coeff_error)
-            return (lower, upper)
-
-        else:
-            raise ValueError("Analytical confidence level only available "
-                             "for measures 'par_corr', 'reg', and 'cmi_gauss'")
-
-    elif confidence == 'bootstrap':
-        if verbosity > 2:
-            print("            Bootstrap confidence test")
-
-        if measure == 'cmi_knn':
-            conf_knn_class = ConfidenceCMIknn(
-                                array=numpy.copy(array),
-                                k=measure_params['knn'], xyz=xyz)
-
-        cmitmp = numpy.zeros(conf_samples)
-        for sam in range(conf_samples):
-
-            if measure == 'cmi_knn':
-                # For knn a bootstrap would create ties in the data,
-                # therefore here only the k's are bootstrapped,
-                # see Runge PhD thesis
-                cmitmp[sam] = conf_knn_class.get_single_estimate()
-
-            else:
-                array_bootstrap = array[:, numpy.random.randint(0, T, T)]
-                if measure == 'par_corr':
-                    cmitmp[sam] = _estimate_partial_correlation(
-                        array=array_bootstrap)
-                elif measure == 'cmi_gauss':
-                    cmitmp[sam] = _par_corr_to_cmi(
-                        _estimate_partial_correlation(
-                            array=array_bootstrap))
-                elif measure == 'reg':
-                    cmitmp[sam] = _estimate_standardized_regression(
-                        array=array_bootstrap)[0]
-                elif measure == 'cmi_symb':
-                    cmitmp[sam] = _estimate_cmi_symb(
-                        array=array_bootstrap, xyz=xyz)
-
-        # Sort and get quantile
-        cmitmp.sort()
-        return (cmitmp[(1. - c_int) * conf_samples],
-                cmitmp[c_int * conf_samples])
+        return null_dist
 
     else:
-        raise ValueError("Confidence must be 'analytic' or 'bootstrap'")
-
+        raise ValueError("Significance shuffle test must be 'full_shuffle'")
 
 def _get_parents(nodes, exclude=None):
 
@@ -1235,7 +1250,9 @@ def _estimate_partial_correlation(array):
 
     (x, y) = _get_residuals(array)
 
-    return numpy.dot(x, y) / numpy.sqrt(numpy.dot(x, x) * numpy.dot(y, y))
+    # val = numpy.dot(x, y) / numpy.sqrt(numpy.dot(x, x) * numpy.dot(y, y))
+
+    return stats.pearsonr(x, y)
 
     # Equivalent to
 #        inv_cov_num = linalg.pinv(numpy.corrcoef(array))
@@ -1281,13 +1298,36 @@ def _estimate_standardized_regression(array, standardize=True, verbosity=0):
     parameter = results.params[1]
     standard_error = results.bse[1]
     resid_error = results.mse_resid
+    pvalue = results.pvalues[1]
     if verbosity > 3:
         print(results.summary())
 
-    return parameter, standard_error, resid_error
+    return parameter, pvalue, standard_error, resid_error
+
 
 
 def _get_nearest_neighbors(array, xyz, k, standardize=True):
+
+    """Retreives the distances eps to the k-th nearest neighbors for every sample
+       in joint space XYZ and returns the numbers of nearest neighbors within eps
+       in subspaces Z, XZ, YZ.
+
+
+    :type array: array
+    :param array: data array of shape (dim, T)
+
+    :type array: xyz
+    :param array: indicator array of shape (dim,)
+
+    :type k: int
+    :param k: number of nearest neighbors in joint space
+
+    :type standardize: bool
+    :param standardize: whether to standardize data before
+
+    :rtype: tuple of arrays
+    :returns: arrays of nearest neighbors for each point in array
+    """
 
     dim, T = array.shape
 
@@ -1296,7 +1336,7 @@ def _get_nearest_neighbors(array, xyz, k, standardize=True):
         array = array.astype('float32')
         array -= array.mean(axis=1).reshape(dim, 1)
         array /= array.std(axis=1).reshape(dim, 1)
-        # If the time series is constant, return nan rather than raising
+        # FIXME: If the time series is constant, return nan rather than raising
         # Exception
         if numpy.isnan(array).sum() != 0:
             raise ValueError("nans after standardizing, "
@@ -1306,86 +1346,32 @@ def _get_nearest_neighbors(array, xyz, k, standardize=True):
     array += (1E-6 * array.std(axis=1).reshape(dim, 1)
               * numpy.random.rand(array.shape[0], array.shape[1]))
 
-    # Flatten for fast weave.inline access
+    # Use cKDTree to get distances eps to the k-th nearest neighbors for every sample
+    # in joint space XYZ with maximum norm
+    tree_xyz = spatial.cKDTree(array.T)
+    epsarray = tree_xyz.query(array.T, k=k+1, p=numpy.inf, eps=0.)[0][:,k].astype('float32')
+
+    # Prepare for fast weave.inline access
     array = array.flatten()
 
     dim_x = int(numpy.where(xyz == 0)[0][-1] + 1)
     dim_y = int(numpy.where(xyz == 1)[0][-1] + 1 - dim_x)
-    # dim_z = maxdim - dim_x - dim_y
 
-    # Initialize
+    # Initialize for weave access
     k_xz = numpy.zeros(T, dtype='int32')
     k_yz = numpy.zeros(T, dtype='int32')
     k_z = numpy.zeros(T, dtype='int32')
 
     code = """
-    int i, j, index=0, t, m, n, d, kxz, kyz, kz, indexfound[T], dummy[T];
-    double  dz=0., dxyz=0., dx=0., dy=0., dis, eps, epsmax, dxyzarray[k+1];
-
-    // FIXME: Due to a completely strange bug I have to initialize and assign
-    // this never used dummy variable. If I remove it, a segmentation fault 
-    // appears...
-    dummy[0] = .5;
+    int i, j, index=0, t, m, n, d, kxz, kyz, kz;
+    double  dz=0., dxyz=0., dx=0., dy=0., dis, eps, epsmax;
 
     // Loop over time points
     for(i = 0; i < T; i++){
 
-        // Growing cube algorithm: Test if n = #(points in epsilon-
-        // environment of reference point i) > k
-        // Start with epsilon for which 95% of points are inside the cube
-        // for a multivariate Gaussian
-        // eps increased by 2 later, also the initial eps
-        eps = 1.*pow( float(k)/float(T), 1./float(dim));
-
-        // n counts the number of neighbors
-        n = 0;
-        while(n <= k){
-            // Increase cube size
-            eps *= 2.;
-            // Start with zero again
-            n = 0;
-            // Loop through all points
-            for(t = 0; t < T; t++){
-                d = 0;
-                while(fabs(array[d*T + i] - array[d*T + t] ) < eps
-                        && d < dim){
-                        d += 1;
-                }
-                // If all distances are within eps, the point t lies
-                // within eps and n is incremented
-                if(d == dim){
-                    indexfound[n] = t;
-                    n += 1;
-                }
-            }
-        }
-
-        // Calculate distance to points only within epsilon environment
-        // according to maximum metric
-        for(j = 0; j < n; j++){
-            index = indexfound[j];
-
-            dxyz = 0.;
-            for(d = 0; d < dim; d++){
-                dxyz = fmax( fabs(array[d*T + i] - array[d*T + index]), dxyz);
-            }
-
-            // Use insertion sort
-            dxyzarray[j] = dxyz;
-            if ( j > 0 ){
-                // only list of smallest k+1 distances need to be kept!
-                m = fmin(k, j-1);
-                while ( m >= 0 && dxyzarray[m] > dxyz ){
-                    dxyzarray[m+1] = dxyzarray[m];
-                    m -= 1;
-                }
-                dxyzarray[m+1] = dxyz;
-            }
-
-        }
-
         // Epsilon of k-th nearest neighbor in joint space
-        epsmax = dxyzarray[k];
+        epsmax = epsarray[i];
+        //printf("%.5f ", epsmax);
 
         // Count neighbors within epsmax in subspaces, since the reference
         // point is included, all neighbors are at least 1
@@ -1405,6 +1391,7 @@ def _get_nearest_neighbors(array, xyz, k, standardize=True):
                 kz += 1;
 
                 // Only now check Y- and X-subspaces
+
                 // Y-subspace, the loop is only entered for dim_y > 1
                 dy = fabs(array[dim_x*T + i] - array[dim_x*T + j]);
                 for(d = dim_x+1; d < dim_x+dim_y; d++){
@@ -1433,7 +1420,7 @@ def _get_nearest_neighbors(array, xyz, k, standardize=True):
     }
     """
 
-    vars = ['array', 'T', 'dim_x', 'dim_y',
+    vars = ['array', 'T', 'dim_x', 'dim_y', 'epsarray',
             'k', 'dim', 'k_xz', 'k_yz', 'k_z']
 
     weave.inline(
@@ -1485,7 +1472,6 @@ def _estimate_cmi_knn(array, k, xyz, norm=0, standardize=True,
     # special.digamma(k_z)).mean()
 
     return cmi
-
 
 class ConfidenceCMIknn():
 

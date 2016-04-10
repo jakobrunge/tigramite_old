@@ -57,7 +57,7 @@ estimate = True
 plot_time_series = True
 plot_lag_functions = True
 plot_graph = True
-
+plot_time_series_graph = True
 
 ###
 # Some parameters used in different steps of the script
@@ -66,7 +66,7 @@ plot_graph = True
 save_folder = '~/test/'
 project_name = 'test'
 save_fig_format = 'pdf'
-verbosity = 2
+verbosity = 3
 
 # Optionally start logging all print output, uncomment below as well
 # sys.stdout = pp.Logger()
@@ -86,7 +86,6 @@ params = {'xtick.labelsize': 5,
           'axes.linewidth': .3,
           'text.fontsize': 8,
           'lines.markersize': 4,            # markersize, in points
-          'legend.labelsep': 0.0005,
           'legend.fontsize': 5,
           'legend.numpoints': 2,
           'legend.handlelength': 1.
@@ -102,22 +101,19 @@ matplotlib.rcParams.update(params)
 ###
 
 # Test process: Vector-Autoregressive Process, see docs in "pp"-module
-a = 0.8
-b = 0.7
-c = 0.9
-d = 0.5
-e = 0.4
+a = .7
+c1 = .6
+c2 = -.6
+c3 = .8
 T = 1000
-graph = numpy.array([[[a, 0., 0.], [0, 0., 0.], [0, 0, 0.], [0., 0., 0.]],
-                     [[b, 0, 0], [a, 0, 0], [0, 0., 0], [0, 0, 0.]],
-                     [[0, 0, 0.], [0, 0, 0.], [a, 0, 0.], [0, 0, 0]],
-                     [[0., 0., 0.], [0., 0., 0.], [0, 0., 0.], [a, 0, 0.]]])
-inv_inno_cov = numpy.array([[1., 0, 0, 0],
-                            [0, 1., 0, 0],
-                            [0, 0, 1., d],
-                            [0, 0, d, 1.]])
-fulldata = pp.var_network(graph=graph, inv_inno_cov=inv_inno_cov,
-                          use='inv_inno_cov', T=T)
+links_coeffs = {0: [((0, -1), a)],
+                1: [((1, -1), a), ((0, -1), c1)],
+                2: [((2, -1), a), ((1, -2), c2)],
+                3: [((3, -1), a), ((0, -3), c3)],
+                }
+
+fulldata, true_parents_neighbors = pp.var_process(links_coeffs, use='inv_inno_cov', T=T)
+T, N = fulldata.shape
 
 ###
 # Possibly supply mask as a boolean array. Samples with a "0" are masked out.
@@ -125,7 +121,7 @@ fulldata = pp.var_network(graph=graph, inv_inno_cov=inv_inno_cov,
 ###
 
 fulldata_mask = numpy.ones(fulldata.shape).astype('bool')
-fulldata_mask[fulldata < -3] = False        # example of masking by value
+# fulldata_mask[fulldata < -3] = False        # example of masking by value
 
 ##
 # Possibly construct symbolic time series for use with measure = 'symb'
@@ -191,7 +187,7 @@ d = {
 
     # Causal Algorithm for estimation of parents/neighbors
     # Maximum time lag up to which links are tested
-    'tau_max': 12,
+    'tau_max': 8,
 
     # Initial number of conditions to use, corresponds
     # to n_0 in Runge et al. PRL (2012).
@@ -213,16 +209,16 @@ d = {
 
     # True for solid links as defined in Runge PRL + PRE (2012)
     # Recommended is  "True".
-    'solid_contemp_links': True,
+    'solid_contemp_links': False,
 
     # Significance testing in algorithm and lag functions estimation
     # - 'fixed': fixed threshold (specified below)
     # - 'analytic': sig_lev for analytical sample
     #  distribution of partial correlation or
     #  regression (Student's t)
-    # - 'shuffle': shuffle test as described in
+    # - 'full_shuffle': shuffle test as described in
     #   Runge et al. PRL (2012)
-    # Recommended for CMI: 'shuffle' or 'fixed'
+    # Recommended for CMI: 'full_shuffle' or 'fixed'
     # Recommended for par_corr and reg: 'analytic'
     'significance': 'analytic',
 
@@ -231,19 +227,19 @@ d = {
     # such that 0.95 actually corresponds to a 90%
     # significance level
     # Here the divisor "/ 2." account for a two-sided level
-    'sig_lev': (1. - .01 / 2.),
+    'sig_lev': (1. - .0001 / 2.),
 
     # Higher significance levels require a larger
     # number of shuffle test samples, i.e. 0.9 needs
     # about 50 samples, 0.95 about 100, .98 about 500.
-    'sig_samples': 100,
+    'sig_samples': 1000,
 
     # fixed threshold for CMI. I recommend to use a
     # shuffle test for CMI to get an idea of typical
     # values (see output in command line). Note that
     # shuffle significance thresholds depend on the
     # estimation dimension.
-    'fixed_thres': 0.05,
+    'fixed_thres': 0.02,
 
     # Confidence bounds to be displayed
     # in lag functions (not used in the algorithm)
@@ -253,7 +249,7 @@ d = {
     # - 'bootstrap': bootstrap confidence bounds
     # Recommended for CMI: 'bootstrap'
     # Recommended for par_corr and reg: 'analytic'
-    'confidence': False,
+    'confidence': 'analytic',
 
     # 0.9 corresponds to 90% confidence interval.
     'conf_lev': .9,
@@ -313,7 +309,7 @@ if estimate:
     # 'parents_y' for ITY
     # 'parents_x' for ITX
     # These measures are described in Runge et al. PRE (2012).
-    cond_types = ['none', 'parents_y']
+    cond_types = ['none', 'parents_xy']
     d['cond_types'] = cond_types
 
     for which in cond_types:
@@ -389,7 +385,7 @@ if plot_time_series:
             skip_ticks_data_y=2,
             unit=None,
             last=(i == d['N'] - 1),
-            time_label='years',
+            time_label='year',
             label_fontsize=8,
         )
 
@@ -403,8 +399,8 @@ if plot_lag_functions:
     # Local params
     cond_types = d['cond_types']
     cond_attributes = {}
-    cond_attributes['color'] = {'none': 'grey', 'parents_y': 'black'}
-    cond_attributes['label'] = {'none': 'Corr', 'parents_y': 'ITY'}
+    cond_attributes['color'] = {'none': 'grey', 'parents_xy': 'red'}
+    cond_attributes['label'] = {'none': 'Corr', 'parents_xy': 'MIT'}
 
     if d['measure'] == 'par_corr' or d['measure'] == 'reg':
         two_sided_thres = True
@@ -420,7 +416,7 @@ if plot_lag_functions:
         N=d['N'],
         tau_max=d['tau_max'],
         var_names=d['var_names'],
-        figsize=(3, 3),
+        figsize=(4, 4),
         minimum=minimum,
         maximum=maximum,
         label_space_left=0.2,
@@ -445,7 +441,7 @@ if plot_lag_functions:
             label=cond_attributes['label'][which],
             two_sided_thres=two_sided_thres,
             marker='.',
-            markersize=1,
+            markersize=3,
             alpha=1.,
             plot_confidence=d['confidence'],
             conf_lev=d['conf_lev'],
@@ -466,7 +462,7 @@ if plot_graph:
 
     for which in cond_types:
 
-        fig = pyplot.figure(figsize=(3.375, 2.4), frameon=False)
+        fig = pyplot.figure(figsize=(4, 3), frameon=False)
         ax = fig.add_subplot(111, frame_on=False)
 
         # Here basemap instances or other images can be appended to ax
@@ -510,3 +506,50 @@ if plot_graph:
             # of graphs where a link is significant
             link_width=None,
         )
+
+if plot_time_series_graph:
+
+    if verbosity > 0:
+        print("Plotting time series graph")
+
+    # Local params
+    cond_types = d['cond_types']
+
+    for which in cond_types:
+
+        fig = pyplot.figure(figsize=(4, 3), frameon=False)
+        ax = fig.add_subplot(111, frame_on=False)
+
+        tigramite_plotting.plot_time_series_graph(
+                fig=fig, ax=ax,
+                lagfuncs=d['results'][which],
+                sig_thres=d['results']['sig_thres_' + which],
+                var_names=d['var_names'],
+                link_colorbar_label=d['measure'] + ' ' + which + ' (cross)',
+                node_colorbar_label=d['measure'] + ' ' + which + ' (auto)',
+                save_name=os.path.expanduser(save_folder) + project_name +
+                '_%s_TSG.%s' % (which, save_fig_format),
+               rescale_cmi=False,
+               link_width=None,
+               # node_pos=None,
+               arrow_linewidth=2.,
+               vmin_edges=-1,
+               vmax_edges=1.,
+               edge_ticks=.4,
+               cmap_edges='RdBu_r',
+               # vmin_nodes=None,
+               # vmax_nodes=None,
+               # node_ticks=.1,
+               # cmap_nodes='RdBu_r',
+               order=None,
+               node_size=5,
+               arrowhead_size=7,
+               curved_radius=.2,
+               label_fontsize=8,
+               alpha=1.,
+               node_label_size=10,
+               link_label_fontsize=6,
+               label_indent_left=.02,
+               label_indent_top=.95,
+               undirected_style='solid',
+               )

@@ -55,7 +55,7 @@ def lowhighpass_filter(data, cutperiod, pass_periods='low'):
     order = 3
     ws = 1. / cutperiod / (0.5 * fs)
     b, a = butter(order, ws, pass_periods)
-    if numpy.rank(data) == 1:
+    if numpy.ndim(data) == 1:
         #        data = lfilter(b, a, data)
         data = filtfilt(b, a, data)
     else:
@@ -108,7 +108,7 @@ def smooth(data, smooth_width, kernel='gaussian',
         window = scipy.linalg.toeplitz(wtmp)
 
     if data_mask is None:
-        if numpy.rank(data) == 1:
+        if numpy.ndim(data) == 1:
             smoothed_data = (data * window).sum(axis=1) / window.sum(axis=1)
         else:
             smoothed_data = numpy.zeros(data.shape)
@@ -116,7 +116,7 @@ def smooth(data, smooth_width, kernel='gaussian',
                 smoothed_data[:, i] = (
                     data[:, i] * window).sum(axis=1) / window.sum(axis=1)
     else:
-        if numpy.rank(data) == 1:
+        if numpy.ndim(data) == 1:
             smoothed_data = ((data * window * data_mask).sum(axis=1) 
                              / (window * data_mask).sum(axis=1))
         else:
@@ -183,7 +183,7 @@ def time_bin_with_mask(data, time_bin_length, data_mask=None):
     if data_mask is None:
         data_mask = numpy.ones(data.shape)
 
-    if numpy.rank(data) == 1.:
+    if numpy.ndim(data) == 1.:
         data.shape = (n_time, 1)
         data_mask.shape = (n_time, 1)
 #    print 'time binning...'
@@ -421,6 +421,43 @@ def var_network(graph=numpy.array([[[0., 0.2], [0., 0.5]],
         X[:, t] = (Xpast * graph).sum(axis=2).sum(axis=1) + noise[t]
 
     return X.transpose()
+
+def var_process(parents_neighbors_coeffs, T=1000, use='inv_inno_cov',
+                verbosity=0):
+
+    max_lag = 0
+    for j in parents_neighbors_coeffs.keys():
+        for node, coeff in parents_neighbors_coeffs[j]:
+            i, tau = node[0], -node[1]
+            max_lag = max(max_lag, abs(tau))
+    N = max(parents_neighbors_coeffs.keys()) + 1
+    graph = numpy.zeros((N, N, max_lag))
+    innos = numpy.zeros((N, N))
+    innos[range(N), range(N)] = 1.
+    true_parents_neighbors = {}
+    # print graph.shape
+    for j in parents_neighbors_coeffs.keys():
+        true_parents_neighbors[j] = []
+        for node, coeff in parents_neighbors_coeffs[j]:
+            i, tau = node[0], -node[1]
+            true_parents_neighbors[j].append((i, -tau))
+            if tau == 0:
+                innos[j, i] = innos[i, j] = coeff
+            else:
+                graph[j, i, tau - 1] = coeff
+
+    if verbosity > 0:
+        print("VAR graph =\n%s" % str(graph))
+        if use == 'inno_cov':
+            print("\nInnovation Cov =\n%s" % str(innos))
+        elif use == 'inv_inno_cov':
+            print("\nInverse Innovation Cov =\n%s" % str(innos))
+
+    data = var_network(graph=graph, inv_inno_cov=innos,
+                          inno_cov=innos,
+                          use=use, T=T)
+
+    return data, true_parents_neighbors
 
 class Logger(object):
     """Class to append print output to a string which can be saved"""
