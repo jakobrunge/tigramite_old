@@ -42,10 +42,10 @@ doi:10.1175/JCLI-D-13-00159.1
 
 ## Required python packages:
 
-- numpy, tested with Version 1.6
-- scipy, tested with Version 0.9
-- matplotlib, tested with Version 1.1
-- networkx, tested with Version 1.6
+- numpy, tested with Version 1.10
+- scipy, tested with Version 0.16
+- matplotlib, tested with Version 1.5
+- networkx, tested with Version 1.10
 - basemap (only if plotting on a map is needed)
 - mpi4py (optional, necessary for using the parallelized implementation)
 
