@@ -1020,7 +1020,7 @@ def _get_estimate(array, measure, xyz, measure_params,
             sig_lev, df) / numpy.sqrt(df + stats.t.ppf(sig_lev, df) ** 2))
         
         # Confidence level
-        value_tdist = tmpval*numpy.sqrt(T-dim) / numpy.sqrt(1.-tmpval**2)
+        value_tdist = numpy.abs(tmpval)*numpy.sqrt(T-dim) / numpy.sqrt(1.-tmpval**2)
         conf_lower = _par_corr_to_cmi((stats.t.ppf(q=1.-c_int, df=T-dim, 
                                               loc=value_tdist)
                  / numpy.sqrt(T-dim + stats.t.ppf(q=1.-c_int, df=T-dim,
@@ -1108,19 +1108,22 @@ def _get_estimate(array, measure, xyz, measure_params,
 
             else:
                 array_bootstrap = array[:, numpy.random.randint(0, T, T)]
-                if measure == 'par_corr':
-                    bootdist[sam] = _estimate_partial_correlation(
-                        array=array_bootstrap)[0]
-                elif measure == 'cmi_gauss':
-                    bootdist[sam] = _par_corr_to_cmi(
-                        _estimate_partial_correlation(
-                            array=array_bootstrap)[0])
-                elif measure == 'reg':
-                    bootdist[sam] = _estimate_standardized_regression(
-                        array=array_bootstrap)[0]
-                elif measure == 'cmi_symb':
-                    bootdist[sam] = _estimate_cmi_symb(
-                        array=array_bootstrap, xyz=xyz)
+                bootdist[sam] = _get_estimate(array=array_bootstrap,
+                                        measure=measure, xyz=xyz,
+                                        measure_params=measure_params)['value']
+                # if measure == 'par_corr':
+                #     bootdist[sam] = _estimate_partial_correlation(
+                #         array=array_bootstrap)[0]
+                # elif measure == 'cmi_gauss':
+                #     bootdist[sam] = _par_corr_to_cmi(
+                #         _estimate_partial_correlation(
+                #             array=array_bootstrap)[0])
+                # elif measure == 'reg':
+                #     bootdist[sam] = _estimate_standardized_regression(
+                #         array=array_bootstrap)[0]
+                # elif measure == 'cmi_symb':
+                #     bootdist[sam] = _estimate_cmi_symb(
+                #         array=array_bootstrap, xyz=xyz)
 
         # Sort and get quantile
         bootdist.sort()
