@@ -5,12 +5,12 @@ Version 2.0 beta (release date 2016-04-12)
 (Python Package)
 
 
-## General Notes:
+## General Notes
 
 Tigramite is a time series analysis python module. With flexibly adaptable scripts it allows to reconstruct graphical models from time series based on the PC algorithm, quantify interaction strengths with different measures, and create high-quality plots of the results.
 
 
-## Features:
+## Features
 
 - Analysis can be performed on multivariate time series. Further scripts allow sliding windows or ensemble analyses
 
@@ -25,7 +25,7 @@ Tigramite is a time series analysis python module. With flexibly adaptable scrip
 - Flexible plotting scripts for publication quality presentation of results
 
 
-## References:
+## References
 
 Runge, J. et al. (2015). Identifying causal gateways and mediators in complex spatio-temporal systems. Nature Communications, 6, 8502. 
 doi:10.1038/ncomms9502
@@ -40,7 +40,7 @@ Runge, J., Petoukhov, V., Kurths, J. (2014): Quantifying the strength and delay 
 doi:10.1175/JCLI-D-13-00159.1
 
 
-## Required python packages:
+## Required python packages
 
 - numpy, tested with Version 1.10
 - scipy, tested with Version 0.16
@@ -50,7 +50,7 @@ doi:10.1175/JCLI-D-13-00159.1
 - mpi4py (optional, necessary for using the parallelized implementation)
 
 
-## User Agreement:
+## User Agreement
 
 By downloading TiGraMITe you agree with the following points: The toolbox is provided without any warranty or conditions of any kind. We assume no responsibility for errors or omissions in the results and interpretations following from application the toolbox.
 
