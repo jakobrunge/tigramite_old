@@ -173,6 +173,14 @@ d = {
     #   the module "pp")
     'measure': 'reg',
 
+    # Quantities to estimate using estimated parents
+    # 'none' for MI/cross correlation
+    # 'parents_xy' for MIT
+    # 'parents_y' for ITY
+    # 'parents_x' for ITX
+    # These measures are described in Runge et al. PRE (2012).
+    'cond_types': ['none', 'parents_xy'],
+
     # for measure='cmi_knn': nearest neighbor parameter
     # used in causal algorithm (higher k reduce the
     # variance of the estimator, better for
@@ -323,10 +331,10 @@ if estimate:
         # 'parents_y' for ITY
         # 'parents_x' for ITX
         # These measures are described in Runge et al. PRE (2012).
-        cond_types = ['none', 'parents_y', 'parents_xy']
-        d['cond_types'] = cond_types
+        # cond_types = ['none', 'parents_y', 'parents_xy']
+        # d['cond_types'] = cond_types
 
-        for which in cond_types:
+        for which in d['cond_types']:
 
             if verbosity > 0:
                 print("Estimating lag functions for condition type %s" % which)

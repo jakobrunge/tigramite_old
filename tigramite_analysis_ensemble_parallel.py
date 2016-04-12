@@ -142,6 +142,14 @@ d = {
     #   the module "pp")
     'measure': 'par_corr',
 
+    # Quantities to estimate using estimated parents
+    # 'none' for MI/cross correlation
+    # 'parents_xy' for MIT
+    # 'parents_y' for ITY
+    # 'parents_x' for ITX
+    # These measures are described in Runge et al. PRE (2012).
+    'cond_types': ['none', 'parents_xy'],
+
     # for measure='cmi_knn': nearest neighbor parameter
     # used in causal algorithm (higher k reduce the
     # variance of the estimator, better for
@@ -365,8 +373,8 @@ def master():
     # 'parents_y' for ITY
     # 'parents_x' for ITX
     # These measures are described in Runge et al. PRE (2012).
-    cond_types = ['none', 'parents_xy']
-    d['cond_types'] = cond_types
+    # cond_types = ['none', 'parents_xy']
+    # d['cond_types'] = cond_types
 
     if verbosity > 0:
         print("\n" + "-"*60 +
@@ -375,7 +383,7 @@ def master():
 
     job_index = 0
     for ens in ensemble_members:
-        for which in cond_types:
+        for which in d['cond_types']:
 
             # if verbosity > 0:
             #     print("Estimating lag functions for ensemble "
@@ -417,7 +425,7 @@ def master():
 
     job_index = 0
     for ens in ensemble_members:
-        for which in cond_types:
+        for which in d['cond_types']:
 
             d['results'][ens][which] = numpy.zeros(
                                         (d['N'],  d['N'], d['tau_max'] + 1))
