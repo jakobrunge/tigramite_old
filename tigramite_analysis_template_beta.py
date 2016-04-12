@@ -526,7 +526,7 @@ if plot_time_series_graph:
                 lagfuncs=d['results'][which],
                 sig_thres=d['results']['sig_thres_' + which],
                 var_names=d['var_names'],
-                link_colorbar_label=d['measure'] + ' ' + which + ' (cross)',
+                link_colorbar_label=d['measure'] + ' ' + which,
                 save_name=os.path.expanduser(save_folder) + project_name +
                 '_%s_TSG.%s' % (which, save_fig_format),
                 rescale_cmi=False,
