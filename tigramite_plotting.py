@@ -4,15 +4,18 @@
 # Tigramite -- Time Series Graph based Measures of Information Transfer
 #
 # Methods are described in:
-#    J. Runge, J. Heitzig, V. Petoukhov, and J. Kurths, Phys. Rev. Lett. 108, 258701 (2012)
-#    J. Runge, J. Heitzig, N. Marwan, and J. Kurths, Phys. Rev. E 86, 061121 (2012)
-#                                                    AND http://arxiv.org/abs/1210.2748
+#    J. Runge, J. Heitzig, V. Petoukhov, and J. Kurths,
+#    Phys. Rev. Lett. 108, 258701 (2012)
+#
+#    J. Runge, J. Heitzig, N. Marwan, and J. Kurths,
+#    Phys. Rev. E 86, 061121 (2012)
+#    AND http://arxiv.org/abs/1210.2748
+#
 #    J. Runge, V. Petoukhov, and J. Kurths, Journal of Climate, 27.2 (2014)
 #
 # Please cite all references when using the method.
 #
-# Copyright (C) 2012-2014 Jakob Runge <jakobrunge@gmail.com>
-# URL: <http://tocsy.pik-potsdam.de/tigramite.php>
+# Copyright (C) 2012-2015 Jakob Runge <jakobrunge@gmail.com>
 
 """
 Module contains functions for the package tigramite.
@@ -25,21 +28,29 @@ Module contains functions for the package tigramite.
 import numpy
 import matplotlib.transforms as transforms
 from matplotlib import pyplot, ticker
-from matplotlib.ticker import ScalarFormatter, FormatStrFormatter
+from matplotlib.ticker import FormatStrFormatter
 
 from copy import deepcopy
 import os
 import tigramite_estimation_beta as tigramite_estimation
 
 
-def par_corr_trafo(cmi):
-    """Transformation of conditional mutual information to partial correlation scale using
-       the (multivariate) Gaussian assumption.
-    """
+# TODO: Add proper docstrings for most functions...
 
-    # Set negative values to small positive number (zero would be interpreted
-    # as non-significant)
-    if numpy.rank(cmi) == 0:
+def par_corr_trafo(cmi):
+    """Transformation of CMI to partial correlation scale.
+
+    Using the (multivariate) Gaussian assumption.
+
+    Args:
+        cmi (float): CMI value.
+
+    Returns:
+        Rescaled value.
+    """
+    # Set negative values to small positive number
+    # (zero would be interpreted as non-significant in some functions)
+    if numpy.ndim(cmi) == 0:
         if cmi < 0.:
             cmi = 1E-8
     else:
@@ -47,9 +58,24 @@ def par_corr_trafo(cmi):
 
     return numpy.sqrt(1. - numpy.exp(-2. * cmi))
 
-def myround(x, base=5, round_mode='updown'):
+
+def par_corr_to_cmi(par_corr):
+    """Transformation of partial correlation to CMI scale.
+
+    Using the (multivariate) Gaussian assumption.
+
+    Args:
+        par_corr (float): par_corr value.
+
+    Returns:
+        Rescaled value.
     """
-    Rounds x to a float with precision base.
+
+    return -0.5 * numpy.log(1. - par_corr**2)
+
+
+def myround(x, base=5, round_mode='updown'):
+    """Rounds x to a float with precision base.
 
     :type x: float
     :param x: number
@@ -59,6 +85,14 @@ def myround(x, base=5, round_mode='updown'):
 
     :rtype: float
     :returns: the rounded number.
+
+    Args:
+        x (float): Number.
+        base (int, optional): Precision.
+        round_mode (str, optional): 'updown', 'up', or 'down'.
+
+    Returns:
+        Rounded number.
     """
     if round_mode == 'updown':
         return base * round(float(x) / base)
@@ -69,30 +103,31 @@ def myround(x, base=5, round_mode='updown'):
 
     return base * round(float(x) / base)
 
+
 def make_nice_axes(ax, where=None, skip=2, color=None):
+    """Makes nice axes.
+
+    Args:
+        ax (TYPE): Axis.
+        where (None, optional): Specifies which axes to draw.
+        skip (int, optional): Specifies the skipping of ticks.
+        color (None, optional): Specifies the color of each axis.
+
+    Raises:
+        ValueError: Description
     """
-    Makes nice axes.
 
-    :type where: list
-    :param where: specifies which axes to draw
+    if where is None:
+        where = ['left', 'bottom']
+    if color is None:
+        color = {'left': 'black', 'right': 'black',
+                 'bottom': 'black', 'top': 'black'}
 
-    :type skip: tuple or int
-    :param skip: specifies the skipping of ticks
-
-    :type color: dict
-    :param color: specifies the color of each axis
-    """
-
-
-    if where == None: where = ['left', 'bottom']
-    if color == None: color = {'left': 'black', 'right': 'black', 
-                               'bottom': 'black', 'top': 'black'}
     if type(skip) == int:
         skip_x = skip_y = skip
     else:
         skip_x = skip[0]
         skip_y = skip[1]
-
 
     for loc, spine in ax.spines.iteritems():
         if loc in where:
@@ -103,7 +138,8 @@ def make_nice_axes(ax, where=None, skip=2, color=None):
                 pyplot.setp(ax.get_yticklabels(), color=color[loc])
             if loc == 'top' or loc == 'bottom':
                 pyplot.setp(ax.get_xticklines(), color=color[loc])
-        elif loc in [item for item in ['left', 'bottom', 'right', 'top'] if item not in where]:
+        elif loc in [item for item in ['left', 'bottom', 'right', 'top']
+                     if item not in where]:
             spine.set_color('none')  # don't draw spine
 
         else:
@@ -133,24 +169,27 @@ def make_nice_axes(ax, where=None, skip=2, color=None):
 
     ax.patch.set_alpha(0.)
 
+
 def get_absmax(lagfuncs):
-    """
+    """Get value at absolute maximum in lag function array.
+
     For an (N, N, tau)-array this comutes the lag of the absolute maximum
     along the tau-axis and stores the (positive or negative) value in
     the (N,N)-array absmax.
 
+    Args:
+        lagfuncs (array): Array of lag functions for each pair of nodes
+            (autodependencies on diagonal)
 
-    :type lagfuncs: numpy array
-    :param lagfuncs: array of lag functions for each pair of nodes (autodependencies on diagonal)
-
-    :rtype: array
-    :returns: the (positive or negative) value at the lag of absolute maximum along tau-axis.
+    Returns:
+        Value at absolute maximum.
     """
 
     absmax_indices = numpy.abs(lagfuncs).argmax(axis=2)
     i, j = numpy.indices(lagfuncs.shape[:2])
 
     return lagfuncs[i, j, absmax_indices]
+
 
 def add_timeseries(fig, axes, i, time, dataseries, label,
                    mask=False,
@@ -166,33 +205,59 @@ def add_timeseries(fig, axes, i, time, dataseries, label,
                    color='black',
                    grey_alpha=1.,
                    ):
+    """Adds a time series plot to an axis.
+
+    Args:
+        fig (figure instance): Figure instance.
+        axes (axis instance): Either gridded axis object or single axis
+            instance.
+        i (int): Index of axis in gridded axis object.
+        time (array): Timelabel array.
+        dataseries (array): One-dimensional data array.
+        label (str): Variable label.
+        mask (bool, optional): Whether to use masked data.
+        dataseries_mask (array, optional): Data mask where False labels masked
+            samples.
+        grey_masked_samples (bool or str, optional): Whether to mark masked
+            samples by grey fills ('fill') or grey data ('data').
+        data_linewidth (float, optional): Linewidth.
+        skip_ticks_data_x (int, optional): ...
+        skip_ticks_data_y (int, optional): ...
+        unit (str, optional): Units of variable.
+        last (bool, optional): Specifiy whether this is the last panel where
+            also the bottom axis is plotted.
+        time_label (str, optional): ...
+        label_fontsize (int, optional): ...
+        color (str, optional): ...
+        grey_alpha (float, optional): Opacity of line.
+    """
 
     # axes[i].xaxis.get_major_formatter().set_useOffset(False)
-
     try:
         ax = axes[i]
     except:
         ax = axes
 
     if mask:
-        maskdata = numpy.ma.masked_where(dataseries_mask == 0 , dataseries)
+        maskdata = numpy.ma.masked_where(dataseries_mask == 0, dataseries)
 
         if grey_masked_samples == 'fill':
-            ax.fill_between(time, maskdata.min(), maskdata.max(), 
-                where=dataseries_mask==0, color='grey', interpolate=True,
-                linewidth=0., alpha = grey_alpha)
+            ax.fill_between(time, maskdata.min(), maskdata.max(),
+                            where=dataseries_mask == 0, color='grey',
+                            interpolate=True,
+                            linewidth=0., alpha=grey_alpha)
         elif grey_masked_samples == 'data':
-            ax.plot(
-                time, dataseries, 
-                color='grey',  marker='.', markersize=data_linewidth,
-                linewidth=data_linewidth, clip_on=False, alpha = grey_alpha)
+            ax.plot(time, dataseries,
+                    color='grey',  marker='.', markersize=data_linewidth,
+                    linewidth=data_linewidth, clip_on=False,
+                    alpha=grey_alpha)
 
-        ax.plot(time, maskdata, 
-            color=color, linewidth=data_linewidth, marker='.', 
-            markersize=data_linewidth, clip_on=False)
+        ax.plot(time, maskdata,
+                color=color, linewidth=data_linewidth, marker='.',
+                markersize=data_linewidth, clip_on=False)
     else:
-        ax.plot(time, dataseries, 
-            color=color, linewidth=data_linewidth, clip_on=False)
+        ax.plot(time, dataseries,
+                color=color, linewidth=data_linewidth, clip_on=False)
 
     if last:
         make_nice_axes(ax, where=['left', 'bottom'],  skip=(
@@ -208,15 +273,17 @@ def add_timeseries(fig, axes, i, time, dataseries, label,
 
     ax.set_xlim(time[0], time[-1])
 
-
     trans = transforms.blended_transform_factory(
         fig.transFigure, ax.transAxes)
     if unit:
         ax.text(.02, .5, r'%s [%s]' % (label, unit), fontsize=label_fontsize,
-                     horizontalalignment='left', verticalalignment='center', rotation=90, transform=trans)
+                horizontalalignment='left', verticalalignment='center',
+                rotation=90, transform=trans)
     else:
         ax.text(.02, .5, r'%s' % (label), fontsize=label_fontsize,
-                     horizontalalignment='left', verticalalignment='center', rotation=90, transform=trans)
+                horizontalalignment='left', verticalalignment='center',
+                rotation=90, transform=trans)
+
 
 def plot_timeseries(data, datatime, var_names, save_name,
                     var_units=None,
@@ -230,10 +297,31 @@ def plot_timeseries(data, datatime, var_names, save_name,
                     label_fontsize=8,
                     figsize=(3.375, 3.),
                     ):
+    """Create and save figure of stacked panels with time series.
+
+    Args:
+        data (array, optional): Data array of shape (time, variables).
+        datatime (array): Timelabel array.
+        var_names (list): List of variable names.
+        save_name (str): figure file name.
+        var_units (list, optional): List of variable units.
+        time_label (str, optional): ...
+        mask (bool, optional): Whether to use masked data.
+        data_mask (bool array, optional): Data mask where False labels masked
+            samples.
+        grey_masked_samples (bool or str, optional): Whether to mark masked
+            samples by grey fills ('fill') or grey data ('data').
+        data_linewidth (float, optional): Linewidth.
+        skip_ticks_data_x (int, optional): ...
+        skip_ticks_data_y (int, optional): ...
+        label_fontsize (int, optional): ...
+        figsize (tuple, optional): Figure size.
+
+    """
 
     T, N = data.shape
 
-    if var_units == None:
+    if var_units is None:
         var_units = ['' for i in range(N)]
 
     fig, axes = pyplot.subplots(N, sharex=True, frameon=False, figsize=figsize)
@@ -258,20 +346,23 @@ def plot_timeseries(data, datatime, var_names, save_name,
     fig.subplots_adjust(bottom=0.15, top=.9, left=0.15, right=.95, hspace=.3)
     fig.savefig(save_name)
 
+
 class setup_matrix():
+    """Create matrix of lag function panels."""
 
     def __init__(self, N, tau_max, var_names,
                  figsize=(3, 3),
                  minimum=-1,
                  maximum=1,
-                 label_space_left = 0.0,
-                 label_space_top = .98,
+                 label_space_left=0.0,
+                 label_space_top=.98,
                  legend_width=.15,
                  legend_fontsize=10,
-                 x_base = 1., y_base = 0.2,
-                 plot_gridlines = False,
-                 lag_units = 'months',
-                 label_fontsize = 8):
+                 x_base=1., y_base=0.2,
+                 plot_gridlines=False,
+                 lag_units='months',
+                 label_fontsize=8):
+        """Initialize matrix of panels."""
 
         self.tau_max = tau_max
 
@@ -296,38 +387,58 @@ class setup_matrix():
                 if j == 0:
                     trans = transforms.blended_transform_factory(
                         self.fig.transFigure, self.axes_dict[(i, j)].transAxes)
-                    self.axes_dict[(i, j)].text(0.01, .5, '%s' % str(var_names[i]), fontsize=label_fontsize,
-                                                horizontalalignment='left', verticalalignment='center', transform=trans)
+                    self.axes_dict[(i, j)].text(0.01, .5, '%s' %
+                                                str(var_names[i]),
+                                                fontsize=label_fontsize,
+                                                horizontalalignment='left',
+                                                verticalalignment='center',
+                                                transform=trans)
                 if i == 0:
                     trans = transforms.blended_transform_factory(
                         self.axes_dict[(i, j)].transAxes, self.fig.transFigure)
-                    self.axes_dict[(i, j)].text(.5, .99, r'${\to}$ ' + '%s' % str(var_names[j]), fontsize=label_fontsize,
-                                                horizontalalignment='center', verticalalignment='top', transform=trans)
+                    self.axes_dict[(i, j)].text(.5, .99, r'${\to}$ ' + '%s' %
+                                                str(var_names[j]),
+                                                fontsize=label_fontsize,
+                                                horizontalalignment='center',
+                                                verticalalignment='top',
+                                                transform=trans)
 
                 # Make nice axis
                 make_nice_axes(
-                    self.axes_dict[(i, j)], where=['left', 'bottom'],  skip=(1, 1))
+                    self.axes_dict[(i, j)], where=['left', 'bottom'],
+                    skip=(1, 1))
                 if x_base is not None:
                     self.axes_dict[(i, j)].xaxis.set_major_locator(
-                        ticker.FixedLocator(numpy.arange(0, self.tau_max + 1, x_base)))
+                        ticker.FixedLocator(numpy.arange(0, self.tau_max + 1,
+                                                         x_base)))
                     if x_base / 2. % 1 == 0:
                         self.axes_dict[(i, j)].xaxis.set_minor_locator(
-                            ticker.FixedLocator(numpy.arange(0, self.tau_max + 1, x_base / 2.)))
+                          ticker.FixedLocator(numpy.arange(0, self.tau_max + 1,
+                                                           x_base / 2.)))
                 if y_base is not None:
-                    self.axes_dict[(i, j)].yaxis.set_major_locator(ticker.FixedLocator(
-                        numpy.arange(myround(minimum, y_base, 'down'),
-                                     myround(maximum, y_base, 'up') + y_base, y_base)))
-                    self.axes_dict[(i, j)].yaxis.set_minor_locator(ticker.FixedLocator(
-                        numpy.arange(myround(minimum, y_base, 'down'),
-                                     myround(maximum, y_base, 'up') + y_base, y_base / 2.)))
+                    self.axes_dict[(i, j)].yaxis.set_major_locator(
+                        ticker.FixedLocator(
+                            numpy.arange(myround(minimum, y_base, 'down'),
+                                         myround(maximum, y_base, 'up') +
+                                         y_base, y_base)))
+                    self.axes_dict[(i, j)].yaxis.set_minor_locator(
+                        ticker.FixedLocator(
+                            numpy.arange(myround(minimum, y_base, 'down'),
+                                         myround(maximum, y_base, 'up') +
+                                         y_base, y_base / 2.)))
 
                     self.axes_dict[(i, j)].set_ylim(
-                        myround(minimum, y_base, 'down'), myround(maximum, y_base, 'up'))
+                        myround(minimum, y_base, 'down'),
+                        myround(maximum, y_base, 'up'))
                 self.axes_dict[(i, j)].label_outer()
                 self.axes_dict[(i, j)].set_xlim(0, self.tau_max)
                 if plot_gridlines:
-                    self.axes_dict[(i, j)].grid(True, which='major', color='black', linestyle='dotted', dashes=(
-                        1, 1), linewidth=.05, zorder=-5)
+                    self.axes_dict[(i, j)].grid(True, which='major',
+                                                color='black',
+                                                linestyle='dotted',
+                                                dashes=(1, 1),
+                                                linewidth=.05,
+                                                zorder=-5)
 
                 plot_index += 1
 
@@ -344,9 +455,12 @@ class setup_matrix():
                      rescale_cmi=False,
                      verbosity=0,
                      ):
+        """Add lag function plot from lagfuncs array."""
 
         if rescale_cmi:
-            print("Rescaling CMI (and sig_thres) to partial correlation scale [0, 1]")
+            print("Rescaling CMI (and sig_thres) to partial correlation "
+                  "scale [0, 1]")
+
             lagfuncs = par_corr_trafo(lagfuncs)
             sig_thres = par_corr_trafo(sig_thres)
             if plot_confidence and conf is not None:
@@ -358,9 +472,12 @@ class setup_matrix():
         if verbosity > 0:
             links = numpy.where(numpy.abs(lagfuncs) > sig_thres)
             for (i, j, tau) in zip(links[0], links[1], links[2]):
-                print '\tlink %d -> %d at lag %d with sig-thres %.4f has weight %.4f' % (i, j, tau, sig_thres[i, j, tau], lagfuncs),
+                print("\tlink %d -> %d at lag %d with sig-thres %.4f"
+                      " has weight %.4f" % (i, j, tau, sig_thres[i, j, tau],
+                                            lagfuncs)),
                 if plot_confidence:
-                    print ' with %2.f%% conf in %s' % ((1. - (1. - conf_lev) * 2) * 100, conf[i, j, tau])
+                    print(" with %2.f%% conf in %s" % ((1. - (1. - conf_lev) *
+                          2) * 100, conf[i, j, tau]))
                 else:
                     print ''
 
@@ -368,30 +485,49 @@ class setup_matrix():
             i = ij[0]
             j = ij[1]
             maskedres = numpy.copy(lagfuncs[i, j, int(i == j):])
-            self.axes_dict[(i, j)].plot(range(int(i == j), self.tau_max + 1),  maskedres,
-                                        linestyle='', color=color, marker=marker, markersize=markersize,
+            self.axes_dict[(i, j)].plot(range(int(i == j), self.tau_max + 1),
+                                        maskedres,
+                                        linestyle='', color=color,
+                                        marker=marker, markersize=markersize,
                                         alpha=alpha, clip_on=False)
             if plot_confidence:
                 maskedconfres = numpy.copy(conf[i, j, int(i == j):])
-                self.axes_dict[(i, j)].plot(range(int(i == j), self.tau_max + 1),  maskedconfres[:, 0],
-                                            linestyle='', color=color, marker='_', markersize=markersize - 2,
+                self.axes_dict[(i, j)].plot(range(int(i == j),
+                                                  self.tau_max + 1),
+                                            maskedconfres[:, 0],
+                                            linestyle='', color=color,
+                                            marker='_',
+                                            markersize=markersize - 2,
                                             alpha=alpha, clip_on=False)
-                self.axes_dict[(i, j)].plot(range(int(i == j), self.tau_max + 1),  maskedconfres[:, 1],
-                                            linestyle='', color=color, marker='_', markersize=markersize - 2,
+                self.axes_dict[(i, j)].plot(range(int(i == j),
+                                                  self.tau_max + 1),
+                                            maskedconfres[:, 1],
+                                            linestyle='', color=color,
+                                            marker='_',
+                                            markersize=markersize - 2,
                                             alpha=alpha, clip_on=False)
 
-            self.axes_dict[(i, j)].plot(range(int(i == j), self.tau_max + 1), numpy.zeros(
-                self.tau_max + 1 - int(i == j)), color='black', linestyle='dotted', linewidth=.1)
+            self.axes_dict[(i, j)].plot(range(int(i == j), self.tau_max + 1),
+                                        numpy.zeros(self.tau_max + 1 -
+                                                    int(i == j)),
+                                        color='black', linestyle='dotted',
+                                        linewidth=.1)
 
             maskedsigres = sig_thres[i, j, int(i == j):]
 
-            self.axes_dict[(i, j)].plot(range(int(i == j), self.tau_max + 1), maskedsigres,
-                                        color=color, linestyle='solid', linewidth=.1, alpha=alpha)
+            self.axes_dict[(i, j)].plot(range(int(i == j), self.tau_max + 1),
+                                        maskedsigres,
+                                        color=color, linestyle='solid',
+                                        linewidth=.1, alpha=alpha)
             if two_sided_thres:
-                self.axes_dict[(i, j)].plot(range(int(i == j), self.tau_max + 1), -sig_thres[i, j, int(i == j):],
-                                            color=color, linestyle='solid', linewidth=.1, alpha=alpha)
+                self.axes_dict[(i, j)].plot(range(int(i == j),
+                                                  self.tau_max + 1),
+                                            -sig_thres[i, j, int(i == j):],
+                                            color=color, linestyle='solid',
+                                            linewidth=.1, alpha=alpha)
 
     def savefig(self, name):
+        """Save matrix figure."""
 
         # Trick to plot legend
         if len(self.labels) > 0:
@@ -412,15 +548,21 @@ class setup_matrix():
                 markersize = item[3]
                 alpha = item[4]
 
-                axlegend.plot([],  [], linestyle='', color=color, marker=marker, markersize=markersize,
+                axlegend.plot([],  [], linestyle='', color=color,
+                              marker=marker, markersize=markersize,
                               label=label, alpha=alpha)
-            axlegend.legend(loc='upper left', ncol=1, bbox_to_anchor=(1.05, 0., .1, 1.),  # mode="expand",
-                            borderaxespad=0, fontsize=self.legend_fontsize).draw_frame(False)
+            axlegend.legend(loc='upper left', ncol=1,
+                            bbox_to_anchor=(1.05, 0., .1, 1.),
+                            borderaxespad=0, fontsize=self.legend_fontsize
+                            ).draw_frame(False)
 
             self.fig.subplots_adjust(left=self.label_space_left, right=1. -
-                                     self.legend_width, top=1. - self.label_space_top, hspace=0.35, wspace=0.35)
+                                     self.legend_width,
+                                     top=1. - self.label_space_top,
+                                     hspace=0.35, wspace=0.35)
             pyplot.figtext(
-                0.5, 0.01, r'lag $\tau$ [%s]' % self.lag_units, horizontalalignment='center', fontsize=self.label_fontsize)
+                0.5, 0.01, r'lag $\tau$ [%s]' % self.lag_units,
+                horizontalalignment='center', fontsize=self.label_fontsize)
         else:
             self.fig.subplots_adjust(
                 left=self.label_space_left, right=.95,
@@ -432,29 +574,30 @@ class setup_matrix():
 
         self.fig.savefig(name)
 
-def draw_network_with_curved_edges(fig, ax,
-                                   G, pos,
-                                   # dictionary of rings:
-                                   # {0:{'sizes':(N,)-array,
-                                   # 'color_array':(N,)-array or None,
-                                   # 'cmap':string,
-                                   node_rings,
-                                   # 'vmin':float or None, 'vmax':float or None, 'label':string or None}}
-                                   node_labels, node_label_size, node_alpha=1., standard_size=100, standard_cmap='OrRd', standard_color='grey', log_sizes=False,
-                                   cmap_links='YlOrRd', cmap_links_edges='YlOrRd', links_vmin=0., links_vmax=1., links_edges_vmin=0., links_edges_vmax=1.,
-                                   links_ticks=.2, links_edges_ticks=.2, link_label_fontsize=8,
-                                   arrowstyle='-|>', arrowhead_size=3., curved_radius=.2, label_fontsize=4, label_fraction=.5,
-                                   link_colorbar_label='link', link_edge_colorbar_label='link_edge',
-                                   undirected_curved=False, undirected_style='solid',
-                                   ):  # , params=None):
+
+def draw_network_with_curved_edges(
+       fig, ax,
+       G, pos,
+       node_rings,
+       node_labels, node_label_size, node_alpha=1., standard_size=100,
+       standard_cmap='OrRd', standard_color='grey', log_sizes=False,
+       cmap_links='YlOrRd', cmap_links_edges='YlOrRd', links_vmin=0.,
+       links_vmax=1., links_edges_vmin=0., links_edges_vmax=1.,
+       links_ticks=.2, links_edges_ticks=.2, link_label_fontsize=8,
+       arrowstyle='-|>', arrowhead_size=3., curved_radius=.2, label_fontsize=4,
+       label_fraction=.5, link_colorbar_label='link',
+       link_edge_colorbar_label='link_edge',
+       undirected_curved=False, undirected_style='solid',
+       ):  # , params=None):
+    """Function to draw a network from networkx graph instance.
+
+    Various attributes are used to specify the graph's properties.
+
+    This function is just a beta-template for now that can be further
+    customized.
     """
-    Function to draw a network with curved edges.
-    """
+
     from matplotlib.patches import FancyArrowPatch, Circle
-
-    # matplotlib.rcParams.update(params)
-
-    # locator = ticker.MaxNLocator(nbins=8, steps=None, trim=False, integer=False, symmetric=False, prune='both')
 
     ax.spines['left'].set_color('none')
     ax.spines['right'].set_color('none')
@@ -466,8 +609,6 @@ def draw_network_with_curved_edges(fig, ax,
     N = len(G)
 
     def draw_edge(ax, u, v, d, seen, directed=True):
-        """Draw an edge.
-        """
 
         n1 = G.node[u]['patch']
         n2 = G.node[v]['patch']
@@ -544,8 +685,10 @@ def draw_network_with_curved_edges(fig, ax,
                 label_vert = verts[(1. - label_fraction) * len(verts), :]
                 l = d['label']
                 string = str(l)
-                ax.text(label_vert[0],  label_vert[1], string, fontsize=link_label_fontsize,
-                        verticalalignment='center', horizontalalignment='center')
+                ax.text(label_vert[0],  label_vert[1], string,
+                        fontsize=link_label_fontsize,
+                        verticalalignment='center',
+                        horizontalalignment='center')
 
         return rad
 
@@ -605,31 +748,29 @@ def draw_network_with_curved_edges(fig, ax,
                 # ax.figbox.bounds[1]+0.05, 0.025, 0.35], frameon=False) #
                 # setup colorbar axes.
                 # setup colorbar axes.
-                cax_n = pyplot.axes([0.1, ax.figbox.bounds[
-                                    1] + 0.02 + ring * 0.11, 0.25, 0.025 + (len(node_rings.keys()) == 1) * 0.035], frameon=False)
-    #            cb_n = pyplot.colorbar( data_to_rgb, cax=cax_n, orientation = 'vertical')
+                cax_n = pyplot.axes([0.1, ax.figbox.bounds[1] + 0.02 +
+                                     ring * 0.11,
+                                     0.25, 0.025 +
+                                     (len(node_rings.keys()) == 1) * 0.035],
+                                    frameon=False)
                 cb_n = pyplot.colorbar(
                     data_to_rgb, cax=cax_n, orientation='horizontal')
                 try:
-                    cb_n.set_ticks(numpy.arange(myround(vmin, node_rings[ring]['ticks'], 'down'), myround(
-                        vmax, node_rings[ring]['ticks'], 'up') + node_rings[ring]['ticks'], node_rings[ring]['ticks']))
+                    cb_n.set_ticks(numpy.arange(myround(vmin,
+                                   node_rings[ring]['ticks'], 'down'), myround(
+                        vmax, node_rings[ring]['ticks'], 'up') +
+                        node_rings[ring]['ticks'], node_rings[ring]['ticks']))
                 except:
                     print 'no ticks given'
                 cb_n.outline.remove()
                 # cb_n.set_ticks()
                 cax_n.set_xlabel(
-                    node_rings[ring]['label'], labelpad=1, fontsize=label_fontsize)
+                    node_rings[ring]['label'], labelpad=1,
+                    fontsize=label_fontsize)
         else:
             colors = None
             vmin = None
             vmax = None
-
-
-#        print colors , node_sizes[:ring+1].sum(axis=0)
-
-# Circle((.5,.5), radius=10000, alpha=1., color = 'grey', # colors[n],
-#                            clip_on=False, linewidth=1., transform = ax.transAxes)
-        # ax.add_patch(c)
 
         for n in G:
             # if n==1: print node_sizes[:ring+1].sum(axis=0)[n]
@@ -639,35 +780,40 @@ def draw_network_with_curved_edges(fig, ax,
             else:
                 alpha = 1.
 
-
-#            print colors[n]
-# c = Circle(pos[n], radius=node_sizes[:ring+1].sum(axis=0)[n], alpha=1., color = 'grey', # colors[n],
-#                            clip_on=False, linewidth=1., transform = ax.transAxes)
-#            ax.add_patch(c)
-            if colors == None:
-                ax.scatter(pos[n][0], pos[n][1], s=node_sizes[:ring + 1].sum(axis=0)[n] ** 2,
-                           facecolors=standard_color, edgecolors=standard_color, alpha=alpha,
-                           clip_on=False, linewidth=.1, zorder=-ring)  # , transform = ax.transAxes)
+            if colors is None:
+                ax.scatter(pos[n][0], pos[n][1],
+                           s=node_sizes[:ring + 1].sum(axis=0)[n] ** 2,
+                           facecolors=standard_color,
+                           edgecolors=standard_color, alpha=alpha,
+                           clip_on=False, linewidth=.1, zorder=-ring)
             else:
-                ax.scatter(pos[n][0], pos[n][1], s=node_sizes[:ring + 1].sum(axis=0)[n] ** 2,
-                           facecolors=colors[n], edgecolors='white', alpha=alpha,
-                           clip_on=False, linewidth=.1, zorder=-ring)  # , transform = ax.transAxes)
+                ax.scatter(pos[n][0], pos[n][1],
+                           s=node_sizes[:ring + 1].sum(axis=0)[n] ** 2,
+                           facecolors=colors[n], edgecolors='white',
+                           alpha=alpha,
+                           clip_on=False, linewidth=.1, zorder=-ring)
 
             if ring == 0:
-                ax.text(pos[n][0], pos[n][1], node_labels[n], fontsize=node_label_size,
-                        horizontalalignment='center', verticalalignment='center', alpha=alpha)
+                ax.text(pos[n][0], pos[n][1], node_labels[n],
+                        fontsize=node_label_size,
+                        horizontalalignment='center',
+                        verticalalignment='center', alpha=alpha)
 
         if node_rings[ring]['sizes'] is not None:
             # Draw reference node as legend
-            ax.scatter(0., 0., s=node_sizes[:ring + 1].sum(axis=0).max() ** 2, alpha=1., facecolors='none', edgecolors='grey',
-                       clip_on=False, linewidth=.1, zorder=-ring)  # , transform = ax.transAxes)
+            ax.scatter(0., 0., s=node_sizes[:ring + 1].sum(axis=0).max() ** 2,
+                       alpha=1., facecolors='none', edgecolors='grey',
+                       clip_on=False, linewidth=.1, zorder=-ring)
 
             if log_sizes:
-                ax.text(0., 0.,  '         ' * ring + '%.2f' % (numpy.exp(max_sizes[
-                        ring]) - 1.), fontsize=node_label_size, horizontalalignment='left', verticalalignment='center')
+                ax.text(0., 0.,  '         ' * ring + '%.2f' %
+                        (numpy.exp(max_sizes[ring]) - 1.),
+                        fontsize=node_label_size,
+                        horizontalalignment='left', verticalalignment='center')
             else:
-                ax.text(0., 0.,  '         ' * ring + '%.2f' % max_sizes[
-                        ring], fontsize=node_label_size, horizontalalignment='left', verticalalignment='center')
+                ax.text(0., 0.,  '         ' * ring + '%.2f' % max_sizes[ring],
+                        fontsize=node_label_size,
+                        horizontalalignment='left', verticalalignment='center')
 
     ##
     # Draw edges of different types
@@ -693,9 +839,6 @@ def draw_network_with_curved_edges(fig, ax,
             if d['undirected_edge'] and d['undirected_edgecolor'] is not None:
                 all_links_edge_weights.append(d['undirected_edgecolor'])
 
-# axlegend.legend(loc = 'upper left', ncol = 1, bbox_to_anchor=(1.05, 0., .1, 1.),#mode="expand",
-#                                        borderaxespad=0).draw_frame(False)
-
     if cmap_links is not None and len(all_links_weights) > 0:
         if links_vmin is None:
             links_vmin = numpy.array(all_links_weights).min()
@@ -709,14 +852,17 @@ def draw_network_with_curved_edges(fig, ax,
 # cax_e = pyplot.axes([.8, ax.figbox.bounds[1]+0.5, 0.025, 0.35],
 # frameon=False) # setup colorbar axes.
         # setup colorbar axes.
-        cax_e = pyplot.axes([0.55, ax.figbox.bounds[
-                            1] + 0.02, 0.3, 0.025 + (len(all_links_edge_weights) == 0) * 0.035], frameon=False)
-#        cb_e = pyplot.colorbar( data_to_rgb_links, cax=cax_e, orientation = 'vertical')
+        cax_e = pyplot.axes([0.55, ax.figbox.bounds[1] + 0.02, 0.3, 0.025 +
+                             (len(all_links_edge_weights) == 0) * 0.035],
+                            frameon=False)
+
         cb_e = pyplot.colorbar(
             data_to_rgb_links, cax=cax_e, orientation='horizontal')
         try:
-            cb_e.set_ticks(numpy.arange(myround(links_vmin, links_ticks, 'down'), myround(
-                links_vmax, links_ticks, 'up') + links_ticks, links_ticks))
+            cb_e.set_ticks(numpy.arange(myround(links_vmin, links_ticks,
+                                                'down'),
+                           myround(links_vmax, links_ticks, 'up') +
+                           links_ticks, links_ticks))
         except:
             print 'no ticks given'
 
@@ -735,18 +881,24 @@ def draw_network_with_curved_edges(fig, ax,
         data_to_rgb_links_edges.set_array(numpy.array(all_links_edge_weights))
         data_to_rgb_links_edges.set_clim(
             vmin=links_edges_vmin, vmax=links_edges_vmax)
+
         # Create colorbars for link edges
 # cax_e = pyplot.axes([.8+.1, ax.figbox.bounds[1]+0.5, 0.025, 0.35],
 # frameon=False) # setup colorbar axes.
         # setup colorbar axes.
         cax_e = pyplot.axes(
-            [0.55, ax.figbox.bounds[1] + 0.05 + 0.1, 0.25, 0.025], frameon=False)
-#        cb_e = pyplot.colorbar( data_to_rgb_links_edges, cax=cax_e, orientation = 'vertical')
+            [0.55, ax.figbox.bounds[1] + 0.05 + 0.1, 0.25, 0.025],
+            frameon=False)
+
         cb_e = pyplot.colorbar(
             data_to_rgb_links_edges, cax=cax_e, orientation='horizontal')
         try:
-            cb_e.set_ticks(numpy.arange(myround(links_edges_vmin, links_edges_ticks, 'down'), myround(
-                links_edges_vmax, links_edges_ticks, 'up') + links_edges_ticks, links_edges_ticks))
+            cb_e.set_ticks(numpy.arange(myround(links_edges_vmin,
+                                                links_edges_ticks, 'down'),
+                                        myround(links_edges_vmax,
+                                                links_edges_ticks, 'up') +
+                                        links_edges_ticks,
+                                        links_edges_ticks))
         except:
             print 'no ticks given'
         cb_e.outline.remove()
@@ -762,6 +914,7 @@ def draw_network_with_curved_edges(fig, ax,
                 seen[(u, v)] = draw_edge(ax, u, v, d, seen, directed=True)
             if d['undirected'] and (v, u) not in seen:
                 seen[(u, v)] = draw_edge(ax, u, v, d, seen, directed=False)
+
 
 def plot_graph(lagfuncs, sig_thres, var_names, save_name, fig, ax,
                link_colorbar_label='',
@@ -787,11 +940,16 @@ def plot_graph(lagfuncs, sig_thres, var_names, save_name, fig, ax,
                node_label_size=10,
                link_label_fontsize=6,
                ):
+    """Creates and saves a network plot from lag function and sig_thres array.
 
+    This is still in beta, hopefully the arguments are self-explanatory,
+    otherwise please look at the code.
+    """
     import networkx
 
     if rescale_cmi:
-        print("Rescaling CMI (and sig_thres) to partial correlation scale [0, 1]")
+        print("Rescaling CMI (and sig_thres) to partial correlation "
+              "scale [0, 1]")
         lagfuncs = par_corr_trafo(lagfuncs)
         sig_thres = par_corr_trafo(sig_thres)
 
@@ -805,7 +963,7 @@ def plot_graph(lagfuncs, sig_thres, var_names, save_name, fig, ax,
     # partial correlation)
     # lagfuncs[numpy.abs(lagfuncs) < sig_thres] = 0.
 
-    net = get_absmax(lagfuncs*(numpy.abs(lagfuncs) >= sig_thres))
+    net = get_absmax(lagfuncs * (numpy.abs(lagfuncs) >= sig_thres))
     G = networkx.DiGraph(net)
 
     node_color = numpy.zeros(N)
@@ -825,14 +983,16 @@ def plot_graph(lagfuncs, sig_thres, var_names, save_name, fig, ax,
             # Here we use the  maximum for the width and weight (=color)
             # of the link
             # Draw link if u--v OR v--u at lag 0 is nonzero
-            dic['undirected'] = (
-                numpy.abs(lagfuncs[u, v][0]) >= sig_thres[u, v][0]) + (numpy.abs(lagfuncs[v, u][0]) >= sig_thres[v, u][0])
+            dic['undirected'] = ((numpy.abs(lagfuncs[u, v][0]) >=
+                                 sig_thres[u, v][0]) or
+                                 (numpy.abs(lagfuncs[v, u][0]) >=
+                                  sig_thres[v, u][0]))
             dic['undirected_alpha'] = alpha
             # value at argmax of average
             if numpy.abs(lagfuncs[u, v][0] - lagfuncs[v, u][0]) > .0001:
                 print("Contemporaneous I(%d; %d)=%.3f != I(%d; %d)=%.3f" % (
-                      u, v, lagfuncs[u, v][0], v, u, lagfuncs[v, u][0])
-                      + " due to conditions, finite sample effects or "
+                      u, v, lagfuncs[u, v][0], v, u, lagfuncs[v, u][0]) +
+                      " due to conditions, finite sample effects or "
                       "masking, here edge color = "
                       "larger (absolute) value.")
             dic['undirected_color'] = get_absmax(
@@ -848,7 +1008,8 @@ def plot_graph(lagfuncs, sig_thres, var_names, save_name, fig, ax,
 
             if tau_max > 0:
                 # True if ensemble mean at lags > 0 is nonzero
-                dic['directed'] = numpy.any(numpy.abs(lagfuncs[u, v][1:]) >= sig_thres[u, v][1:])
+                dic['directed'] = numpy.any(
+                    numpy.abs(lagfuncs[u, v][1:]) >= sig_thres[u, v][1:])
             else:
                 dic['directed'] = False
             dic['directed_alpha'] = alpha
@@ -867,7 +1028,8 @@ def plot_graph(lagfuncs, sig_thres, var_names, save_name, fig, ax,
             # d['min_ensemble_frac'])
             if tau_max > 0:
                 lags = numpy.abs(lagfuncs[u, v][1:]).argsort()[::-1] + 1
-                sig_lags = (numpy.where(numpy.abs(lagfuncs[u, v][1:]) >= sig_thres[u, v][1:])[0] + 1).tolist()
+                sig_lags = (numpy.where(numpy.abs(lagfuncs[u, v][
+                            1:]) >= sig_thres[u, v][1:])[0] + 1).tolist()
             else:
                 lags, sig_lags = [], []
             dic['label'] = str([l for l in lags if l in sig_lags])[1:-1]
@@ -884,7 +1046,7 @@ def plot_graph(lagfuncs, sig_thres, var_names, save_name, fig, ax,
     if len(all_strengths) == 0:
         all_strengths = [0.]
 
-    if node_pos == None:
+    if node_pos is None:
         pos = networkx.circular_layout(deepcopy(G))
 #            pos = networkx.spring_layout(deepcopy(G))
     else:
@@ -893,10 +1055,10 @@ def plot_graph(lagfuncs, sig_thres, var_names, save_name, fig, ax,
             pos[i] = (node_pos['x'][i], node_pos['y'][i])
 
     node_rings = {0: {'sizes': None, 'color_array': node_color,
-                      'cmap': cmap_nodes, 'vmin': vmin_nodes, 'vmax': vmax_nodes, 'ticks': node_ticks,
+                      'cmap': cmap_nodes, 'vmin': vmin_nodes,
+                      'vmax': vmax_nodes, 'ticks': node_ticks,
                       'label': node_colorbar_label, 'colorbar': True,
                       }
-
                   }
 
     draw_network_with_curved_edges(
@@ -919,308 +1081,46 @@ def plot_graph(lagfuncs, sig_thres, var_names, save_name, fig, ax,
         arrowstyle='-|>', arrowhead_size=arrowhead_size,
         curved_radius=curved_radius, label_fontsize=label_fontsize,
         link_label_fontsize=link_label_fontsize, label_fraction=.5,
-        link_colorbar_label=link_colorbar_label, undirected_style=undirected_style)
+        link_colorbar_label=link_colorbar_label,
+        undirected_style=undirected_style)
 
     fig.subplots_adjust(left=0.1, right=.9, bottom=.25, top=.95)
     savestring = os.path.expanduser(save_name)
     pyplot.savefig(savestring)
 
 
-def get_residuals(i, j, tau, data, 
-                  parents_neighbors, contemp, max_conds,
-                  cond_mode, tau_max,
-                  mask=False, data_mask=None,
-                  mask_type=None,
-                  standardize=True,
-                  verbosity=0,
-                ):
-
-    conds_x, conds_y = tigramite_estimation._get_conditions(
-        parents_neighbors=parents_neighbors,
-        i=i,
-        j=j,
-        contemp=contemp,
-        max_conds=max_conds,
-        cond_mode=cond_mode)
-
-    X = [(i, -tau)]
-    Y = [(j, 0)]
-    Z = conds_y + [(node[0], -tau + node[1]) for node in conds_x]
-
-    array, xyz = tigramite_estimation._construct_array(
-                X=X, Y=Y, Z=Z,
-                tau_max=tau_max,
-                data=data,
-                mask=mask,
-                data_mask=data_mask,
-                mask_type=mask_type,
-                verbosity=verbosity)
-
-    D, T = array.shape
-
-    if standardize:
-        # Standardize
-        array -= array.mean(axis=1).reshape(D, 1)
-        array /= array.std(axis=1).reshape(D, 1)
-        if numpy.isnan(array).sum() != 0:
-            raise ValueError("nans after standardizing, "
-                             "possibly constant array!""")
-
-    (x, y) = tigramite_estimation._get_residuals(array)
-
-    # print '%d --> %d at lag %d' % (i, j, tau)
-    # print 'reg ', tigramite_estimation._estimate_standardized_regression(array, standardize=standardize, verbosity=0)[0], tigramite_estimation._estimate_standardized_regression(numpy.array([x,y]), standardize=False, verbosity=0)[0]
-    # print 'pc ', tigramite_estimation._estimate_partial_correlation(array), tigramite_estimation._estimate_partial_correlation(numpy.array([x,y]))
-
-
-    return (x, y)
-
-
-class setup_matrix_scatter():
-
-    def __init__(self, N, tau_max, var_names,
-                 figsize=(3, 3),
-                 label_space_left = 0.0,
-                 label_space_top = .98,
-                 legend_width=.15,
-                 legend_fontsize=10,
-                 label_fontsize = 8):
-
-        self.tau_max = tau_max
-
-        self.labels = []
-        self.legend_width = legend_width
-        self.legend_fontsize = legend_fontsize
-
-        self.label_space_left = label_space_left
-        self.label_space_top = label_space_top
-        self.label_fontsize = label_fontsize
-
-        self.fig = pyplot.figure(figsize=figsize)
-
-        self.axes_dict = {}
-
-        plot_index = 1
-        for i in range(N):
-            for j in range(N):
-                self.axes_dict[(i, j)] = self.fig.add_subplot(N, N, plot_index)
-                # Plot process labels
-                if j == 0:
-                    trans = transforms.blended_transform_factory(
-                        self.fig.transFigure, self.axes_dict[(i, j)].transAxes)
-                    self.axes_dict[(i, j)].text(0.01, .5, '%s' % str(var_names[i]), fontsize=label_fontsize,
-                                                horizontalalignment='left', verticalalignment='center', transform=trans)
-                if i == 0:
-                    trans = transforms.blended_transform_factory(
-                        self.axes_dict[(i, j)].transAxes, self.fig.transFigure)
-                    self.axes_dict[(i, j)].text(.5, .99, r'${\to}$ ' + '%s' % str(var_names[j]), fontsize=label_fontsize,
-                                                horizontalalignment='center', verticalalignment='top', transform=trans)
-
-                self.axes_dict[(i, j)].label_outer()
-
-                plot_index += 1
-
-    def add_scatter(self, data, 
-                    mask=False,
-                    data_mask=None,
-                    mask_type=None,
-                    which_tau=None,
-                    parents_neighbors=None,
-                    cond_mode='none',
-                    max_conds=10,
-                    solid_contemp_links=True,
-                    tau_max=1,
-                    color='grey',
-                    label=None,
-                    marker='.',
-                    markersize=3,
-                    alpha=1.,
-                    verbosity=0,
-                    ):
-
-        if label is not None:
-            self.labels.append((label, color, marker, markersize, alpha))
-
-        for ij in self.axes_dict.keys():
-            i = ij[0]
-            j = ij[1]
-            tau = which_tau[i, j]
-            if tau == 0 and solid_contemp_links:
-                contemp = True
-            else:
-                contemp = False
-
-            (x, y) = get_residuals(
-                        i=i, j=j, tau=tau, data=data,
-                        parents_neighbors=parents_neighbors,
-                        contemp=contemp, max_conds=max_conds,
-                        cond_mode=cond_mode, tau_max=tau_max,
-                        mask=mask, data_mask=data_mask,
-                        mask_type=mask_type,
-                        verbosity=verbosity,
-                )
-
-            self.axes_dict[(i, j)].plot(x, y,
-                                        linestyle='', color=color, marker=marker, markersize=markersize,
-                                        alpha=alpha, clip_on=False)
-
-
-    def savefig_scatter(self, which_tau, name, skip_x=1, skip_y=1):
-
-
-
-        # Trick to plot legend
-        if len(self.labels) > 0:
-            axlegend = self.fig.add_subplot(111, frameon=False)
-            axlegend.spines['left'].set_color('none')
-            axlegend.spines['right'].set_color('none')
-            axlegend.spines['bottom'].set_color('none')
-            axlegend.spines['top'].set_color('none')
-            axlegend.set_xticks([])
-            axlegend.set_yticks([])
-
-            # self.labels.append((label, color, marker, markersize, alpha))
-            for item in self.labels:
-
-                label = item[0]
-                color = item[1]
-                marker = item[2]
-                markersize = item[3]
-                alpha = item[4]
-
-                axlegend.plot([],  [], linestyle='', color=color, marker=marker,
-                                markersize=markersize,
-                              label=label, alpha=alpha)
-            axlegend.legend(loc='upper left', ncol=1, bbox_to_anchor=(1.05, 0., .1, 1.),  # mode="expand",
-                            borderaxespad=0, fontsize=self.legend_fontsize).draw_frame(False)
-            # legend = axlegend.legend(title='Residuals', loc='upper left', ncol=1, bbox_to_anchor=(1.05, 0., .1, 1.),  # mode="expand",
-            #                 borderaxespad=0, fontsize=self.legend_fontsize)
-            # legend.get_title().set_fontsize(self.legend_fontsize) #legend 'Title' fontsize
-            # legend.draw_frame(False)
-
-            self.fig.subplots_adjust(left=self.label_space_left, right=1. -
-                                     self.legend_width, top=1. - self.label_space_top, hspace=0.8, wspace=0.5)
-
-        else:
-            self.fig.subplots_adjust(
-                left=self.label_space_left, right=.95, top=1. - self.label_space_top, hspace=0.8, wspace=0.5)
-        
-        for ij in self.axes_dict.keys():
-            i = ij[0]
-            j = ij[1]
-            self.axes_dict[(i, j)].set_title(
-            r'$\tau=%d$' % which_tau[i, j],
-            fontsize=self.label_fontsize-2)
-            # self.axes_dict[(i, j)].text(
-            # 0.5, 0.98, r'$\tau=%d$' % which_tau[i, j],
-            # horizontalalignment='center', transform=self.axes_dict[(i, j)].transAxes,
-            # verticalalignment='top',fontsize=self.label_fontsize-2)
-            # Make nice axis
-            make_nice_axes(
-                self.axes_dict[(i, j)], where=['left', 'bottom'],  skip=(skip_x, skip_y))
-
-        self.fig.savefig(name)
-
-
-def plot_single_scatter(i, j, tau, 
-                data, name, figsize,
-                var_names,
-                var_units=None,
-                mask=False,
-                data_mask=None,
-                mask_type=None,
-                which_tau=None,
-                parents_neighbors=None,
-                cond_types=None,
-                max_conds=10,
-                solid_contemp_links=True,
-                tau_max=1,
-                cond_attributes=None,
-                marker='.',
-                markersize=3,
-                alpha=1.,
-                skip_x=2, skip_y=2,  
-                legend_fontsize=8,
-                title_fontsize=8,
-                legend_width=.2,
-                verbosity=0
-                ):
-
-        if tau == 0 and solid_contemp_links:
-            contemp = True
-        else:
-            contemp = False
-
-
-        fig = pyplot.figure(figsize=figsize)
-        ax = fig.add_subplot(111)
-
-        for which in cond_types:
-
-            label = cond_attributes['label'][which]
-            color = cond_attributes['color'][which]
-
-            (x, y) = get_residuals(
-                        i=i, j=j, tau=tau, data=data,
-                        parents_neighbors=parents_neighbors,
-                        contemp=contemp, max_conds=max_conds,
-                        cond_mode=which, tau_max=tau_max,
-                        mask=mask, data_mask=data_mask,
-                        mask_type=mask_type,
-                        verbosity=verbosity,
-                )
-
-            ax.plot(x, y, linestyle='', color=color, marker=marker, markersize=markersize,
-                    alpha=alpha, clip_on=False, label=label)
-
-        ax.set_title( r"$\tau=%d$" % (tau),
-            fontsize=title_fontsize)
-
-        ax.legend(loc='upper left', ncol=1, bbox_to_anchor=(1.05, 0., .1, 1.),  # mode="expand",
-                            borderaxespad=0, fontsize=legend_fontsize).draw_frame(False)
-
-        fig.subplots_adjust(left=0.2, right=1.-legend_width, top=.9, bottom=.2, hspace=0., wspace=0.)
-
-        make_nice_axes(ax, where=['left', 'bottom'],  skip=(skip_x, skip_y))
-
-        ax.set_xlabel('%s' %str(var_names[i]), fontsize=legend_fontsize)
-        ax.set_ylabel('%s' %str(var_names[j]), fontsize=legend_fontsize)
-
-        fig.savefig(name)
-
-
 def plot_time_series_graph(lagfuncs, sig_thres, var_names, save_name, fig, ax,
-               link_colorbar_label='',
-               node_colorbar_label='',
-               rescale_cmi=False,
-               link_width=None,
-               # node_pos=None,
-               arrow_linewidth=5.,
-               vmin_edges=-1,
-               vmax_edges=1.,
-               edge_ticks=.4,
-               cmap_edges='RdBu_r',
-               # vmin_nodes=None,
-               # vmax_nodes=None,
-               # node_ticks=.1,
-               # cmap_nodes='RdBu_r',
-               order=None,
-               node_size=30,
-               arrowhead_size=20,
-               curved_radius=.2,
-               label_fontsize=8,
-               alpha=1.,
-               node_label_size=10,
-               link_label_fontsize=6,
-               label_indent_left=.2,
-               label_indent_top=.95,
-               undirected_style='solid',
-               ):
+                           link_colorbar_label='',
+                           rescale_cmi=False,
+                           link_width=None,
+                           arrow_linewidth=5.,
+                           vmin_edges=-1,
+                           vmax_edges=1.,
+                           edge_ticks=.4,
+                           cmap_edges='RdBu_r',
+                           order=None,
+                           node_size=30,
+                           arrowhead_size=20,
+                           curved_radius=.2,
+                           label_fontsize=8,
+                           alpha=1.,
+                           node_label_size=10,
+                           link_label_fontsize=6,
+                           label_indent_left=.2,
+                           label_indent_top=.95,
+                           undirected_style='solid',
+                           ):
+
+    """Creates and saves plot of time series graph.
+
+    Based on lag function and sig_thres array. This function needs docstrings!
+    """
 
     import networkx
 
     if rescale_cmi:
-        print("Rescaling CMI (and sig_thres) to partial correlation scale [0, 1]")
+        print("Rescaling CMI (and sig_thres) to partial correlation "
+              "scale [0, 1]")
         lagfuncs = par_corr_trafo(lagfuncs)
         sig_thres = par_corr_trafo(sig_thres)
 
@@ -1238,24 +1138,26 @@ def plot_time_series_graph(lagfuncs, sig_thres, var_names, save_name, fig, ax,
         raise ValueError("order must be a permutation of range(N)")
 
     def translate(row, lag):
-        return row*max_lag + lag
+        return row * max_lag + lag
 
     # Define graph links by absolute maximum (positive or negative like for
     # partial correlation)
-    # lagfuncs[numpy.abs(lagfuncs) < sig_thres] = 0.
-    tsg = numpy.zeros((N*max_lag, N*max_lag))
-    tsg_attr = numpy.zeros((N*max_lag, N*max_lag))
+    tsg = numpy.zeros((N * max_lag, N * max_lag))
+    tsg_attr = numpy.zeros((N * max_lag, N * max_lag))
 
-
-    for i,j, tau in numpy.column_stack(numpy.where(numpy.abs(lagfuncs) >= sig_thres)):
-#                    print '\n',i, j, tau
-#                    print numpy.where(nonmasked[:,j])[0]
+    for i, j, tau in numpy.column_stack(numpy.where(numpy.abs(lagfuncs) >=
+                                        sig_thres)):
+        #                    print '\n',i, j, tau
+        #                    print numpy.where(nonmasked[:,j])[0]
 
         for t in range(max_lag):
-            if 0 <= translate(i, t-tau) and translate(i, t-tau) % max_lag <= translate(j, t)  % max_lag:
-#                            print translate(i, t-tau), translate(j, t), lagfuncs[i,j,tau]
-                tsg[translate(i, t-tau), translate(j, t)] = lagfuncs[i,j,tau]
-                tsg_attr[translate(i, t-tau), translate(j, t)] = lagfuncs[i,j,tau]
+            if (0 <= translate(i, t - tau) and
+               translate(i, t - tau) % max_lag <= translate(j, t) % max_lag):
+                # print translate(i, t-tau), translate(j, t), lagfuncs[i,j,tau]
+                tsg[translate(i, t - tau), translate(j, t)
+                    ] = lagfuncs[i, j, tau]
+                tsg_attr[translate(i, t - tau), translate(j, t)
+                         ] = lagfuncs[i, j, tau]
 
     G = networkx.DiGraph(tsg)
 
@@ -1264,18 +1166,9 @@ def plot_time_series_graph(lagfuncs, sig_thres, var_names, save_name, fig, ax,
     all_strengths = []
     # Add attributes, contemporaneous and directed links are handled separately
     for (u, v, dic) in G.edges(data=True):
-        # average lagfunc for link u --> v ANDOR u -- v
-        # if tau_max > 0:
-        #     # argmax of absolute maximum
-        #     argmax = numpy.abs(lagfuncs[u, v][1:]).argmax() + 1
-        # else:
-        #     argmax = 0
+
         if u != v:
-            # For contemp links masking or finite samples can lead to different
-            # values for u--v and v--u
-            # Here we use the  maximum for the width and weight (=color)
-            # of the link
-            # Draw link if u--v OR v--u at lag 0 is nonzero
+
             if u % max_lag == v % max_lag:
                 dic['undirected'] = True
                 dic['directed'] = False
@@ -1283,52 +1176,23 @@ def plot_time_series_graph(lagfuncs, sig_thres, var_names, save_name, fig, ax,
                 dic['undirected'] = False
                 dic['directed'] = True
 
-            # dic['undirected'] = (
-            #     numpy.abs(lagfuncs[u, v][0]) >= sig_thres[u, v][0]) + (numpy.abs(lagfuncs[v, u][0]) >= sig_thres[v, u][0])
             dic['undirected_alpha'] = alpha
-            # value at argmax of average
-            # if numpy.abs(lagfuncs[u, v][0] - lagfuncs[v, u][0]) > .0001:
-            #     print("Contemporaneous I(%d; %d)=%.3f != I(%d; %d)=%.3f" % (
-            #           u, v, lagfuncs[u, v][0], v, u, lagfuncs[v, u][0])
-            #           + " due to conditions, finite sample effects or "
-            #           "masking, here edge color = "
-            #           "larger (absolute) value.")
-            dic['undirected_color'] = get_absmax(numpy.array([[[tsg_attr[u, v],
-                                                                tsg_attr[v, u]]]])).squeeze()
-            # get_absmax(
-                # numpy.array([[[lagfuncs[u, v][0],
-                #                lagfuncs[v, u][0]]]])).squeeze()
-            # if link_width is None:
+            dic['undirected_color'] = get_absmax(
+                                        numpy.array([[[tsg_attr[u, v],
+                                                       tsg_attr[v, u]]]])
+                                        ).squeeze()
             dic['undirected_width'] = arrow_linewidth
-            # else:
-            #     dic['undirected_width'] = link_width[
-            #         u, v, 0] / link_width.max() * arrow_linewidth
-
             all_strengths.append(dic['undirected_color'])
 
             dic['directed_alpha'] = alpha
-            # if link_width is None:
-                # fraction of nonzero values
+
             dic['directed_width'] = arrow_linewidth
-            # else:
-            #     dic['directed_width'] = link_width[
-            #         u, v, argmax] / link_width.max() * arrow_linewidth
 
             # value at argmax of average
             dic['directed_color'] = tsg_attr[u, v]
             all_strengths.append(dic['directed_color'])
 
-            # Sorted list of significant lags (only if robust wrt
-            # d['min_ensemble_frac'])
-            # if tau_max > 0:
-            #     lags = numpy.abs(lagfuncs[u, v][1:]).argsort()[::-1] + 1
-            #     sig_lags = (numpy.where(numpy.abs(lagfuncs[u, v][1:]) >= sig_thres[u, v][1:])[0] + 1).tolist()
-            # else:
-            #     lags, sig_lags = [], []
-            dic['label'] = None    #str([l for l in lags if l in sig_lags])[1:-1]
-        # else:
-            # Node color is max of average autodependency
-            # node_color[u] = lagfuncs[u, v][argmax]
+            dic['label'] = None
 
         dic['directed_edge'] = False
         dic['directed_edgecolor'] = None
@@ -1339,39 +1203,36 @@ def plot_time_series_graph(lagfuncs, sig_thres, var_names, save_name, fig, ax,
     if len(all_strengths) == 0:
         all_strengths = [0.]
 
-#     if node_pos == None:
-#         pos = networkx.circular_layout(deepcopy(G))
-# #            pos = networkx.spring_layout(deepcopy(G))
-#     else:
-#         pos = {}
-#         for i in range(N):
-#             pos[i] = (node_pos['x'][i], node_pos['y'][i])
+    posarray = numpy.zeros((N * max_lag, 2))
+    for i in xrange(N * max_lag):
 
-    posarray = numpy.zeros((N*max_lag, 2))
-    for i in xrange(N*max_lag):
-    
-        posarray[i] = numpy.array([(i % max_lag), (1.-i/max_lag)])
+        posarray[i] = numpy.array([(i % max_lag), (1. - i / max_lag)])
 
     pos_tmp = {}
-    for i in range(N*max_lag):
-    # for n in range(N):
-    #     for tau in range(max_lag):
-    #         i = n*N + tau
-            pos_tmp[i] = numpy.array([((i % max_lag)-posarray.min(axis=0)[0])/(posarray.max(axis=0)[0]-posarray.min(axis=0)[0]), 
-                                  ((1.-i/max_lag)-posarray.min(axis=0)[1])/(posarray.max(axis=0)[1]-posarray.min(axis=0)[1]) ])
+    for i in range(N * max_lag):
+        # for n in range(N):
+        #     for tau in range(max_lag):
+        #         i = n*N + tau
+        pos_tmp[i] = numpy.array([((i % max_lag) - posarray.min(axis=0)[0]) /
+                                  (posarray.max(axis=0)[0] -
+                                   posarray.min(axis=0)[0]),
+                                  ((1. - i / max_lag) -
+                                   posarray.min(axis=0)[1]) /
+                                  (posarray.max(axis=0)[1] -
+                                   posarray.min(axis=0)[1])])
 #                    print pos[i]
     pos = {}
     for n in range(N):
         for tau in range(max_lag):
-            pos[n*max_lag+tau] = pos_tmp[order[n]*max_lag+tau]
+            pos[n * max_lag + tau] = pos_tmp[order[n] * max_lag + tau]
 
     node_rings = {0: {'sizes': None, 'color_array': None,
-                      # 'cmap': cmap_nodes, 'vmin': vmin_nodes, 'vmax': vmax_nodes, 'ticks': node_ticks,
-                      'label': node_colorbar_label, 'colorbar': False,
+                      'label': '', 'colorbar': False,
                       }
                   }
 
-    node_labels = [ '' for i in range(N*max_lag)]   #] for v in range(max_lag)]
+    # ] for v in range(max_lag)]
+    node_labels = ['' for i in range(N * max_lag)]
 
     draw_network_with_curved_edges(
         fig=fig, ax=ax,
@@ -1393,21 +1254,31 @@ def plot_time_series_graph(lagfuncs, sig_thres, var_names, save_name, fig, ax,
         arrowstyle='-|>', arrowhead_size=arrowhead_size,
         curved_radius=curved_radius, label_fontsize=label_fontsize,
         link_label_fontsize=link_label_fontsize, label_fraction=.5,
-        link_colorbar_label=link_colorbar_label, undirected_curved=True, undirected_style=undirected_style)
+        link_colorbar_label=link_colorbar_label, undirected_curved=True,
+        undirected_style=undirected_style)
 
     for i in range(N):
-        trans = transforms.blended_transform_factory(fig.transFigure, ax.transData)
-        ax.text(label_indent_left,pos[order[i]*max_lag][1],'%s' %str(var_names[order[i]]), fontsize=label_fontsize,
-                         horizontalalignment='left',verticalalignment='center', transform = trans)
+        trans = transforms.blended_transform_factory(
+            fig.transFigure, ax.transData)
+        ax.text(label_indent_left, pos[order[i] * max_lag][1],
+                '%s' % str(var_names[order[i]]), fontsize=label_fontsize,
+                horizontalalignment='left', verticalalignment='center',
+                transform=trans)
 
-    for tau in numpy.arange(max_lag-1, -1, -1):
-        trans = transforms.blended_transform_factory(ax.transData, fig.transFigure)
-        if tau == max_lag-1:
-            ax.text(pos[tau][0], label_indent_top, r'$t$', fontsize=label_fontsize,
-                         horizontalalignment='center',verticalalignment='top', transform = trans)
+    for tau in numpy.arange(max_lag - 1, -1, -1):
+        trans = transforms.blended_transform_factory(
+            ax.transData, fig.transFigure)
+        if tau == max_lag - 1:
+            ax.text(pos[tau][0], label_indent_top, r'$t$',
+                    fontsize=label_fontsize,
+                    horizontalalignment='center',
+                    verticalalignment='top', transform=trans)
         else:
-            ax.text(pos[tau][0], label_indent_top, r'$t-%s$' %str(max_lag-tau-1), fontsize=label_fontsize,
-                         horizontalalignment='center',verticalalignment='top', transform = trans)
+            ax.text(pos[tau][0], label_indent_top,
+                    r'$t-%s$' % str(max_lag - tau - 1),
+                    fontsize=label_fontsize,
+                    horizontalalignment='center', verticalalignment='top',
+                    transform=trans)
 
     fig.subplots_adjust(left=0.1, right=.98, bottom=.25, top=.9)
     savestring = os.path.expanduser(save_name)

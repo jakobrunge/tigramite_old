@@ -30,7 +30,7 @@ import tigramite_estimation_beta as tigramite_estimation
 import tigramite_plotting
 
 # import Parallel module (based on mpi4py)
-# import tigramite_parallelizer
+# import mpi
 
 #  Import NumPy for the array object and fast numerics
 import numpy
@@ -112,7 +112,8 @@ links_coeffs = {0: [((0, -1), a)],
                 3: [((3, -1), a), ((0, -3), c3)],
                 }
 
-fulldata, true_parents_neighbors = pp.var_process(links_coeffs, use='inv_inno_cov', T=T)
+fulldata, true_parents_neighbors = pp.var_process(links_coeffs,
+                                                  use='inv_inno_cov', T=T)
 T, N = fulldata.shape
 
 ###
@@ -359,8 +360,8 @@ if estimate:
 else:
     # Load results dict (Note that this will override the results dict
     # with parameters as specified above)
-    d = pickle.load(open(os.path.expanduser(save_folder)
-                         + project_name + '_results.pkl', 'r'))
+    d = pickle.load(open(os.path.expanduser(save_folder) + project_name +
+                         '_results.pkl', 'r'))
 
 
 if plot_time_series:
@@ -526,30 +527,24 @@ if plot_time_series_graph:
                 sig_thres=d['results']['sig_thres_' + which],
                 var_names=d['var_names'],
                 link_colorbar_label=d['measure'] + ' ' + which + ' (cross)',
-                node_colorbar_label=d['measure'] + ' ' + which + ' (auto)',
                 save_name=os.path.expanduser(save_folder) + project_name +
                 '_%s_TSG.%s' % (which, save_fig_format),
-               rescale_cmi=False,
-               link_width=None,
-               # node_pos=None,
-               arrow_linewidth=2.,
-               vmin_edges=-1,
-               vmax_edges=1.,
-               edge_ticks=.4,
-               cmap_edges='RdBu_r',
-               # vmin_nodes=None,
-               # vmax_nodes=None,
-               # node_ticks=.1,
-               # cmap_nodes='RdBu_r',
-               order=None,
-               node_size=5,
-               arrowhead_size=7,
-               curved_radius=.2,
-               label_fontsize=8,
-               alpha=1.,
-               node_label_size=10,
-               link_label_fontsize=6,
-               label_indent_left=.02,
-               label_indent_top=.95,
-               undirected_style='solid',
-               )
+                rescale_cmi=False,
+                link_width=None,
+                arrow_linewidth=2.,
+                vmin_edges=-1,
+                vmax_edges=1.,
+                edge_ticks=.4,
+                cmap_edges='RdBu_r',
+                order=None,
+                node_size=5,
+                arrowhead_size=7,
+                curved_radius=.2,
+                label_fontsize=8,
+                alpha=1.,
+                node_label_size=10,
+                link_label_fontsize=6,
+                label_indent_left=.02,
+                label_indent_top=.95,
+                undirected_style='solid',
+                )

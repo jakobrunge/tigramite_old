@@ -4,15 +4,18 @@
 # Tigramite -- Time Series Graph based Measures of Information Transfer
 #
 # Methods are described in:
-#    J. Runge, J. Heitzig, V. Petoukhov, and J. Kurths, Phys. Rev. Lett. 108, 258701 (2012)
-#    J. Runge, J. Heitzig, N. Marwan, and J. Kurths, Phys. Rev. E 86, 061121 (2012)
-#                                                    AND http://arxiv.org/abs/1210.2748
+#    J. Runge, J. Heitzig, V. Petoukhov, and J. Kurths,
+#    Phys. Rev. Lett. 108, 258701 (2012)
+#
+#    J. Runge, J. Heitzig, N. Marwan, and J. Kurths,
+#    Phys. Rev. E 86, 061121 (2012)
+#    AND http://arxiv.org/abs/1210.2748
+#
 #    J. Runge, V. Petoukhov, and J. Kurths, Journal of Climate, 27.2 (2014)
 #
 # Please cite all references when using the method.
 #
-# Copyright (C) 2012-2014 Jakob Runge <jakobrunge@gmail.com>
-# URL: <http://tocsy.pik-potsdam.de/tigramite.php>
+# Copyright (C) 2012-2015 Jakob Runge <jakobrunge@gmail.com>
 
 """
 Module contains functions for the package tigramite.
@@ -28,23 +31,19 @@ import sys
 
 
 def lowhighpass_filter(data, cutperiod, pass_periods='low'):
-    """
-    Butterworth low- or high pass filter. This function applies a linear filter twice, 
-    once forward and once backwards. The combined filter has linear phase.
+    """Butterworth low- or high pass filter.
 
-    Assumes data of shape (T, N) or (T,)
+    This function applies a linear filter twice, once forward and once
+    backwards. The combined filter has linear phase.
 
-    :type data: array
-    :param data: data
+    Args:
+        data (array, optional): Data array of shape (time, variables).
+        cutperiod (int): Period of cutoff.
+        pass_periods (str, optional): Either 'low' or 'high' to act as a low-
+            or high-pass filter
 
-    :type cutperiod: integer
-    :param cutperiod: cutt off period
-
-    :type pass_periods: string
-    :param pass_periods: 'low' or 'high'
-
-    :rtype: array
-    :returns: filtered data
+    Returns:
+        Filtered data array.
     """
     try:
         from scipy.signal import butter, filtfilt
@@ -56,11 +55,9 @@ def lowhighpass_filter(data, cutperiod, pass_periods='low'):
     ws = 1. / cutperiod / (0.5 * fs)
     b, a = butter(order, ws, pass_periods)
     if numpy.ndim(data) == 1:
-        #        data = lfilter(b, a, data)
         data = filtfilt(b, a, data)
     else:
         for i in range(data.shape[1]):
-            #            data[:,i] = lfilter(b, a, data[:,i])
             data[:, i] = filtfilt(b, a, data[:, i])
 
     return data
@@ -68,39 +65,39 @@ def lowhighpass_filter(data, cutperiod, pass_periods='low'):
 
 def smooth(data, smooth_width, kernel='gaussian',
            data_mask=None, residuals=False):
-    """
-    Returns either smoothed time series or the difference between the original
+    """Returns either smoothed time series or its residuals.
+
+    the difference between the original
     and the smoothed time series (=residuals) of a kernel smoothing with
     gaussian (smoothing kernel width = twice the sigma!) or heaviside window,
     equivalent to a running mean.
 
     Assumes data of shape (T, N) or (T,)
-
-    :type data: array
-    :param data: data
-
-    :type smooth_width: float
-    :param smooth_width: smoothing kernel width
-
-    :type kernel: str
-    :param kernel: kernel type: 'gaussian' or 'heaviside'
-
-    :type residuals: bool
-    :param residuals: True if residuals are desired
-
     :rtype: array
     :returns: smoothed/residual data
+
+    Args:
+        data (array, optional): Data array of shape (time, variables).
+        smooth_width (float): Window width of smoothing, 2*sigma for a
+            gaussian.
+        kernel (str, optional): 'gaussian' or 'heaviside' for a running mean.
+        data_mask (bool array, optional): Data mask where False labels masked
+            samples.
+        residuals (bool, optional): True if residuals should be returned.
+
+    Returns:
+        Smoothed/residual data.
     """
 
-    print("%s %s smoothing with " % ({True: "Take residuals of a ", 
-                                   False:""}[residuals], kernel) +
+    print("%s %s smoothing with " % ({True: "Take residuals of a ",
+                                      False: ""}[residuals], kernel) +
           "window width %.2f (2*sigma for a gaussian!)" % (smooth_width))
 
     totaltime = len(data)
     if kernel == 'gaussian':
         window = numpy.exp(-(numpy.arange(totaltime).reshape((1, totaltime)) -
-                             numpy.arange(totaltime).reshape((totaltime, 1))) 
-                            ** 2 / ((2. * smooth_width / 2.) ** 2))
+                             numpy.arange(totaltime).reshape((totaltime, 1))
+                             ) ** 2 / ((2. * smooth_width / 2.) ** 2))
     elif kernel == 'heaviside':
         import scipy.linalg
         wtmp = numpy.zeros(totaltime)
@@ -117,14 +114,14 @@ def smooth(data, smooth_width, kernel='gaussian',
                     data[:, i] * window).sum(axis=1) / window.sum(axis=1)
     else:
         if numpy.ndim(data) == 1:
-            smoothed_data = ((data * window * data_mask).sum(axis=1) 
-                             / (window * data_mask).sum(axis=1))
+            smoothed_data = ((data * window * data_mask).sum(axis=1) /
+                             (window * data_mask).sum(axis=1))
         else:
             smoothed_data = numpy.zeros(data.shape)
             for i in range(data.shape[1]):
                 smoothed_data[:, i] = ((
-                    data[:, i] * window * data_mask[:, i]).sum(axis=1) 
-                    / (window * data_mask[:, i]).sum(axis=1))
+                    data[:, i] * window * data_mask[:, i]).sum(axis=1) /
+                    (window * data_mask[:, i]).sum(axis=1))
 
     if residuals:
         return data - smoothed_data
@@ -133,51 +130,39 @@ def smooth(data, smooth_width, kernel='gaussian',
 
 
 def weighted_avg_and_std(values, axis, weights):
+    """Returns the weighted average and standard deviation.
+
+    Args:
+        values (array): Data array of shape (time, variables).
+        axis (int): Axis to average/std about
+        weights (array): Weight array of shape (time, variables).
+
+    Returns:
+        Tuple of weighted average and standard deviation.
     """
-    Returns the weighted average and standard deviation.
-
-    values, weights -- Numpy ndarrays with the same shape.
-
-    :type values: array
-    :param values: data
-
-    :type axis: int
-    :param axis: axis to average/std about
-
-    :rtype: tuple
-    :returns: tuple of average and std
-    """
-
     values[numpy.isnan(values)] = 0.
     average = numpy.ma.average(values, axis=axis, weights=weights)
 #    print average.shape, weights.shape, values.shape
 #    print values-average[:,numpy.newaxis]
-    variance = numpy.sum(
-        weights * (values - numpy.expand_dims(average, axis)) ** 2, axis=axis) / weights.sum(axis=axis)
+    variance = numpy.sum(weights * (values - numpy.expand_dims(average, axis)
+                                    ) ** 2, axis=axis) / weights.sum(axis=axis)
 
     return (average, numpy.sqrt(variance))
 
 
 def time_bin_with_mask(data, time_bin_length, data_mask=None):
-    """
-    Returns time binned data where only about non-masked values is averaged.
+    """Returns time binned data where only about non-masked values is averaged.
 
-    Assumes data of shape (T, N) or (T,)
+    Args:
+        data (array, optional): Data array of shape (time, variables).
+        time_bin_length (int): Length of time bin.
+        data_mask (bool array, optional): Data mask where False labels masked
+            samples.
 
-    :type data: array
-    :param data: data
-
-    :type data_mask: array
-    :param data_mask: mask indicator
-
-    :type time_bin_length: int
-    :param time_bin_length: length of time bin
-
-    :rtype: tuple
-    :returns: binned data, new length, grid_size
+    Returns:
+        Tuple of time-binned data array and new length of array.
     """
 
-#    print fulldata.shape, fulldata_mask.shape, time_bin_length
     n_time = len(data)
 
     if data_mask is None:
@@ -186,16 +171,17 @@ def time_bin_with_mask(data, time_bin_length, data_mask=None):
     if numpy.ndim(data) == 1.:
         data.shape = (n_time, 1)
         data_mask.shape = (n_time, 1)
-#    print 'time binning...'
+
     bindata = numpy.zeros(
         (n_time / time_bin_length,) + data.shape[1:], dtype="float32")
-    index = 0
-    for i in xrange(0, n_time - time_bin_length + 1, time_bin_length):
+    for index, i in enumerate(range(0, n_time - time_bin_length + 1,
+                                    time_bin_length)):
         # print weighted_avg_and_std(fulldata[i:i+time_bin_length], axis=0,
         # weights=fulldata_mask[i:i+time_bin_length])[0]
-        bindata[index] = weighted_avg_and_std(
-            data[i:i + time_bin_length], axis=0, weights=data_mask[i:i + time_bin_length])[0]
-        index += 1
+        bindata[index] = weighted_avg_and_std(data[i:i + time_bin_length],
+                                              axis=0,
+                                              weights=data_mask[i:i +
+                                              time_bin_length])[0]
 
     n_time, grid_size = bindata.shape
 
@@ -203,40 +189,38 @@ def time_bin_with_mask(data, time_bin_length, data_mask=None):
 
 
 def ordinal_patt_array(array, array_mask, dim=2, step=1, verbosity=0):
+    """Returns symbolified array of ordinal patterns.
+
+    Each data vector (X_t, ..., X_t+(dim-1)*step) is converted to its rank
+    vector. E.g., (0.2, -.6, 1.2) --> (1,0,2) which is then assigned to a
+    unique integer (see Article). There are faculty(dim) possible rank vectors.
+
+    Note that the symb_array is step*(dim-1) shorter than the original array!
+
+    Reference: B. Pompe and J. Runge (2011). Momentary information transfer as
+    a coupling measure of time series. Phys. Rev. E, 83(5), 1-12.
+    doi:10.1103/PhysRevE.83.051122
+
+    Args:
+        array (array, optional): Data array of shape (time, variables).
+        array_mask (bool array, optional): Data mask where False labels masked
+            samples.
+        dim (int, optional): Pattern dimension
+        step (int, optional): Delay of pattern embedding vector.
+        verbosity (int, optional): Level of verbosity.
+
+    Returns:
+        Tuple of converted data and new length
     """
-    Returns symbolified array of ordinal patterns with dimension dim and stepsize step.
-
-    Each data vector (X_t, ..., X_t+(dim-1)*step) is converted to its rank vector.
-    E.g., (0.2, -.6, 1.2) --> (1,0,2) which is then assigned to a unique integer (see Article)... there are faculty(dim) possible rank vectors.
-
-    The symb_array is step*(dim-1) shorter than the original array!
-
-    Reference: B. Pompe and J. Runge (2011). Momentary information transfer as a coupling measure of time series. Phys. Rev. E, 83(5), 1–12. doi:10.1103/PhysRevE.83.051122
-
-    :type array: array
-    :param array: data
-
-    :type array: array_mask
-    :param array: data mask
-
-    :type dim: int
-    :param dim: pattern dimension
-
-    :type step: int
-    :param step: delay of pattern embedding vector
-
-    :rtype: tuple
-    :returns: converted data, new length
-    """
-
     import scipy
     from scipy.misc import factorial
 
-    assert dim > 1
-
     patt_time = int(array.shape[0] - step * (dim - 1))
-    assert patt_time > 0
     n_time, nodes = array.shape
+
+    if dim <= 1 or patt_time <= 0:
+        raise ValueError("Dim mist be > 1 and length of delay vector smaller "
+                         "array length.")
 
     patt = numpy.zeros((patt_time, nodes), dtype='int32')
     patt_mask = numpy.zeros((patt_time, nodes), dtype='int32')
@@ -284,19 +268,15 @@ def ordinal_patt_array(array, array_mask, dim=2, step=1, verbosity=0):
 
 
 def quantile_bin_array(data, bins=6):
+    """Returns symbolified array with equal-quantile binning.
+
+    Args:
+        data (array, optional): Data array of shape (time, variables).
+        bins (int, optional): Number of bins.
+
+    Returns:
+        Converted data of intefer type.
     """
-    Returns symbolified array with equal-quantile binning.
-
-    :type data: array
-    :param data: data
-
-    :type bins: int
-    :param bins: number of bins
-
-    :rtype: data
-    :returns: converted data
-    """
-
     T, N = data.shape
 
     # get the bin quantile steps
@@ -315,39 +295,11 @@ def quantile_bin_array(data, bins=6):
     return symb_array.astype('int32')
 
 
-def get_sig_thres(sig_lev, df):
-    """
-    Returns the significance threshold of the pearson correlation coefficient according to 
-    a Student's t-distribution with df degrees of freedom.
-
-    One- or two-tailedness should be accounted for by the choice of sig_lev, i.e., 95% two-tailed
-    significance corresponds to sig_lev = 0.975
-
-
-    :type sig_lev: float
-    :param sig_lev: significance level
-
-    :type df: int
-    :param df: degrees of freedom
-
-    :rtype: float
-    :returns: significance threshold
-    """
-    try:
-        import scipy.stats
-    except:
-        print "Couldn't import scipy.stats... no significance threshold calculated!"
-
-    return scipy.stats.t.ppf(sig_lev, df) / numpy.sqrt(df + scipy.stats.t.ppf(sig_lev, df) ** 2)
-
-
 def var_network(graph=numpy.array([[[0., 0.2], [0., 0.5]],
                                    [[0., 0.], [0., 0.3]]]),
                 inv_inno_cov=None, inno_cov=None, use='inno_cov',
                 T=100):
-    """
-    Static method to generate a realization of a vector-autoregressive
-    process with possibly correlated innovations.
+    """Returns a vector-autoregressive process with correlated innovations.
 
     Useful for testing.
 
@@ -364,26 +316,17 @@ def var_network(graph=numpy.array([[[0., 0.2], [0., 0.5]],
     covariance matrix of (eps_1(t), eps_2(t)) OR inno_cov being
     the covariance.
 
+    Args:
+        graph (array, optional): Lagged connectivity matrices.
+        inv_inno_cov (array, optional): Inverse covariance matrix of
+            innovations.
+        inno_cov (array, optional): Covariance matrix of innovations.
+        use (str, optional): Specifier, either 'inno_cov' or 'inv_inno_cov'.
+        T (int, optional): Sample size.
 
-    :type graph: array
-    :param graph: lagged connectivity matrices.
-
-    :type inv_inno_cov: array or None
-    :param inv_inno_cov: inverse covariance matrix of innovations
-
-    :type inno_cov: array or None
-    :param inno_cov:  covariance matrix of innovations
-
-    :type use: string
-    :param use: specifier
-
-    :type T: integer
-    :param T: sample size
-
-    :rtype: array
-    :returns: realization of VAR process
+    Returns:
+        Array of realization.
     """
-
     N, N, P = graph.shape
 
     # Test stability
@@ -422,16 +365,35 @@ def var_network(graph=numpy.array([[[0., 0.2], [0., 0.5]],
 
     return X.transpose()
 
+
 def var_process(parents_neighbors_coeffs, T=1000, use='inv_inno_cov',
                 verbosity=0):
+    """Returns a vector-autoregressive process with correlated innovations.
 
+    Wrapper around var_network with possibly more user-friendly input options.
+
+    Args:
+        parents_neighbors_coeffs (dict): Dictionary of format
+            {..., j:[(var1, lag1), (var2, lag2), ...], ...} for all variables
+            where vars must be in [0..N-1] and lags <= 0 with number of
+            variables N. If lag=0, a nonzero value in the covariance matrix (or
+            its inverse) is implied. These should be the same for (i, j) and
+            (j, i).
+        use (str, optional): Specifier, either 'inno_cov' or 'inv_inno_cov'.
+        T (int, optional): Sample size.
+        verbosity (int, optional): Level of verbosity.
+
+    Returns:
+        Array of realization.
+    """
     max_lag = 0
     for j in parents_neighbors_coeffs.keys():
         for node, coeff in parents_neighbors_coeffs[j]:
             i, tau = node[0], -node[1]
             max_lag = max(max_lag, abs(tau))
     N = max(parents_neighbors_coeffs.keys()) + 1
-    graph = numpy.zeros((N, N, max_lag))
+    graph = numpy.zeros((N, N, max_lag + 1))
+
     innos = numpy.zeros((N, N))
     innos[range(N), range(N)] = 1.
     true_parents_neighbors = {}
@@ -454,17 +416,18 @@ def var_process(parents_neighbors_coeffs, T=1000, use='inv_inno_cov',
             print("\nInverse Innovation Cov =\n%s" % str(innos))
 
     data = var_network(graph=graph, inv_inno_cov=innos,
-                          inno_cov=innos,
-                          use=use, T=T)
+                       inno_cov=innos,
+                       use=use, T=T)
 
     return data, true_parents_neighbors
+
 
 class Logger(object):
     """Class to append print output to a string which can be saved"""
     def __init__(self):
         self.terminal = sys.stdout
-        self.log = "" #open("log.dat", "a")
+        self.log = ""       # open("log.dat", "a")
 
     def write(self, message):
         self.terminal.write(message)
-        self.log += message  #  .write(message)  
+        self.log += message  # .write(message)

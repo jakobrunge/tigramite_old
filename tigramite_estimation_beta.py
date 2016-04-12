@@ -55,7 +55,59 @@ def _sanity_checks(which='pc_algo',
                    solid_contemp_links=True,
                    confidence=False, conf_lev=0.95, conf_samples=100,
                    verbosity=0):
-    """Sanity checks of data and params."""
+    """Sanity checks of data and params
+
+    Args:
+        which (str, optional): Either 'pc_algo' or 'lagfuncs' which implies
+            some different sanity checks.
+        data (array, optional): Data array of shape (time, variables).
+        estimate_parents_neighbors (str, optional): Whether to estimate 
+            'parents', 'neighbors', or 'both'.
+        tau_min (int, optional): Minimum time delay.
+        tau_max (int, optional): Maximum time delay.
+        initial_conds (int, optional): Initial number of conditions.
+        max_conds (int, optional): Maximum number of conditions.
+        max_trials (int, optional): Maximum number of combinations per
+            dimension.
+        measure (str, optional): Measure of dependence, currently 'par_corr',
+            'reg', 'cmi_knn', 'cmi_symb', 'cmi_gauss' are supported.
+        measure_params (dict, optional): Parameters for dependence
+            measures.
+        significance (bool or str, optional): Type of significance test,
+            either False or 'analytic', 'full_shuffle', 'fixed'.
+        sig_lev (float, optional): Significance level (eg, 0.95).
+        sig_samples (int, optional): Number of samples for shuffle significance
+            test.
+        fixed_thres (float, optional): Fixed significance threshold.
+        mask (bool, optional): Whether to use masked data.
+        mask_type (list, optional): Can be ['x', 'y', 'z'] or either of these
+            strings to mark for which variables in the dependence measure
+            I(X; Y | Z) the samples should be masked.
+        data_mask (bool array, optional): Data mask where False labels masked
+            samples.
+        initial_parents_neighbors (dict, optional): False or None to
+            start from fully connected graph, else a dictionary of format
+            {..., j:[(var1, lag1), (var2, lag2), ...], ...} for all variables
+            where vars must be in [0..N-1] and lags <= 0.
+        selected_variables (list, optional): False or list of variable indices
+            to run algorithm on.
+        parents_neighbors (None, optional): Dictionary of format
+            {..., j:[(var1, lag1), (var2, lag2), ...], ...} for all variables
+            where vars must be in [0..N-1] and lags <= 0.
+        cond_mode (str, optional): Conditioning mode, must be one of 'none',
+            'parents_x', 'parents_y', 'parents_xy'.
+        solid_contemp_links (bool, optional): Type of contemporaneous links,
+            see References for further information.
+        confidence (bool or string, optional): Type of confidence test,
+            either False or 'analytic' or 'bootstrap'.
+        conf_lev (float, optional): Two-sided confidence level (eg, 0.9).
+        conf_samples (int, optional): Number of samples for bootstrap.
+        verbosity (int, optional): Level of verbosity.
+
+    Raises:
+        TypeError: Errors regarding the checked variables.
+        ValueError: Errors regarding the checked variables.
+    """
 
     T, N = data.shape
 
@@ -101,9 +153,8 @@ def _sanity_checks(which='pc_algo',
         raise ValueError("measure must be one of "
                          "'par_corr', 'reg', 'cmi_knn', "
                          "'cmi_symb', 'cmi_gauss'")
-    if ((measure == 'cmi_knn')
-       and (measure_params['knn'] > T/2.
-            or measure_params['knn'] < 1)):
+    if ((measure == 'cmi_knn') and (measure_params['knn'] > T/2. or
+                                    measure_params['knn'] < 1)):
         raise ValueError("knn = %s , " % str(measure_params['knn']) +
                          "should be between 1 and T/2")
     if measure == 'cmi_symb':
@@ -117,28 +168,25 @@ def _sanity_checks(which='pc_algo',
     # Checks only for pc_algo
     if which == 'pc_algo':
         if (measure == 'cmi_knn'):
-            if (measure_params is None
-               or type(measure_params) != dict
-               or 'knn' not in measure_params.keys()):
+            if (measure_params is None or type(measure_params) != dict or
+                    'knn' not in measure_params.keys()):
                 raise ValueError("measure_params must be dictionary "
                                  "containing key 'knn'. "
                                  "Recommended value 'knn':10.")
         if tau_min > tau_max or min(tau_min, tau_max) < 0:
             raise ValueError("tau_max = %d, tau_min = %d, " % (
-                             tau_max, tau_min)
-                             + "but 0 <= tau_min <= tau_max")
-        if (estimate_parents_neighbors == 'parents'
-                or estimate_parents_neighbors == 'both') and tau_max < 1:
+                             tau_max, tau_min) + "but 0 <= tau_min <= tau_max")
+        if (estimate_parents_neighbors == 'parents' or
+                estimate_parents_neighbors == 'both') and tau_max < 1:
             raise ValueError("tau_max = %d, tau_min = %d, " % (
-                             tau_max, tau_min)
-                             + "but tau_max >= tau_min > 0 to "
+                             tau_max, tau_min) +
+                             "but tau_max >= tau_min > 0 to "
                              "estimate parents")
         if initial_conds > max_conds:
             raise ValueError("initial_conds must be <= max_conds")
         if max_trials <= 0:
             raise ValueError("max_trials must be > 0")
-        if (initial_parents_neighbors is not None
-                and _check_parents_neighbors(
+        if (initial_parents_neighbors is not None and _check_parents_neighbors(
                     initial_parents_neighbors, N) is False):
             raise ValueError("initial_parents_neighbors must provide "
                              "parents/neighbors for all variables j in format:"
@@ -152,22 +200,13 @@ def _sanity_checks(which='pc_algo',
     # Checks only for lag functions
     elif which == 'lagfuncs':
         if 'cmi' in measure:
-            # if (measure_params is None
-            #    or type(measure_params) != dict
-            #    or 'rescale_cmi' not in measure_params.keys()):
-            #     raise ValueError("measure_params must be dictionary "
-            #                      "containing key 'rescale_cmi'. "
-            #                      "'rescale_cmi':True rescales the CMI to the "
-            #                      "partial correlation scale. ")
             if (measure == 'cmi_knn'):
-                if (measure_params is None
-                    or type(measure_params) != dict
-                    or 'knn' not in measure_params.keys()):
+                if (measure_params is None or type(measure_params) != dict or
+                        'knn' not in measure_params.keys()):
                     raise ValueError("measure_params must contain key 'knn', "
                                      "recommended value 'knn':10.")
         if tau_max < 0:
-            raise ValueError("tau_max = %d, " % (tau_max)
-                             + "but 0 <= tau_max")
+            raise ValueError("tau_max = %d, " % (tau_max) + "but 0 <= tau_max")
         if confidence not in ['analytic', 'bootstrap', False]:
             raise ValueError("confidence must be one of "
                              "'analytic', 'bootstrap', False")
@@ -175,13 +214,12 @@ def _sanity_checks(which='pc_algo',
             if (conf_lev < .5 or conf_lev >= 1.):
                 raise ValueError("conf_lev = %.2f, " % conf_lev +
                                  "but must be between 0.5 and 1")
-            if (confidence == 'bootstrap'
-                    and conf_samples*(1. - conf_lev) / 2. < 1.):
+            if (confidence == 'bootstrap' and
+                    conf_samples*(1. - conf_lev) / 2. < 1.):
                 raise ValueError("conf_samples*(1.-conf_lev)/2 is %.2f"
                                  % (conf_samples*(1.-conf_lev)/2.) +
                                  ", must be >> 1")
-        if (parents_neighbors is not None
-                and _check_parents_neighbors(
+        if (parents_neighbors is not None and _check_parents_neighbors(
                     parents_neighbors, N) is False):
             raise ValueError("parents_neighbors must provide parents/neighbors"
                              " for all variables j in format: {..., "
@@ -205,12 +243,43 @@ def pc_algo_all(data, estimate_parents_neighbors='both',
                 mask=False, mask_type=None, data_mask=None,
                 initial_parents_neighbors=None,
                 verbosity=0):
-    """
-    Function to estimate parents of all processes of multivariate dataset.
+    """Function to estimate parents of all processes of multivariate dataset.
 
+    Args:
+        data (array, optional): Data array of shape (time, variables).
+        estimate_parents_neighbors (str, optional): Whether to estimate
+            'parents', 'neighbors', or 'both'.
+        tau_min (int, optional): Minimum time delay.
+        tau_max (int, optional): Maximum time delay.
+        initial_conds (int, optional): Initial number of conditions.
+        max_conds (int, optional): Maximum number of conditions.
+        max_trials (int, optional): Maximum number of combinations per
+            dimension.
+        measure (str, optional): Measure of dependence, currently 'par_corr',
+            'reg', 'cmi_knn', 'cmi_symb', 'cmi_gauss' are supported.
+        measure_params (dictionary, optional): Parameters for dependence
+            measures.
+        significance (bool or str, optional): Type of significance test,
+            either False or 'analytic', 'full_shuffle', 'fixed'.
+        sig_lev (float, optional): Significance level (eg, 0.95).
+        sig_samples (int, optional): Number of samples for shuffle significance
+            test.
+        fixed_thres (float, optional): Fixed significance threshold.
+        mask (bool, optional): Whether to use masked data.
+        mask_type (list, optional): Can be ['x', 'y', 'z'] or either of these
+            strings to mark for which variables in the dependence measure
+            I(X; Y | Z) the samples should be masked.
+        data_mask (bool array, optional): Data mask where False labels masked
+            samples.
+        initial_parents_neighbors (dict, optional): False or None to
+            start from fully connected graph, else a dictionary of format
+            {..., j:[(var1, lag1), (var2, lag2), ...], ...} for all variables
+            where vars must be in [0..N-1] and lags <= 0.
+        verbosity (int, optional): Level of verbosity.
 
-    :rtype: dictionary
-    :returns: results
+    Returns:
+        dictionary of parents and neighbors for all variables in format:
+        {..., j:[(var1, lag1), (var2, lag2), ...], ...} with lags <= 0.
     """
 
     T, N = data.shape
@@ -236,8 +305,8 @@ def pc_algo_all(data, estimate_parents_neighbors='both',
 
     parents_neighbors = dict([(i, []) for i in range(N)])
 
-    if (estimate_parents_neighbors == 'parents'
-            or estimate_parents_neighbors == 'both'):
+    if (estimate_parents_neighbors == 'parents' or
+            estimate_parents_neighbors == 'both'):
         for j in range(N):
             res = _pc_algo(data, j,
                            parents_or_neighbors='parents',
@@ -256,8 +325,8 @@ def pc_algo_all(data, estimate_parents_neighbors='both',
                            verbosity=verbosity)
             parents_neighbors[j] = res
 
-    if (estimate_parents_neighbors == 'neighbors'
-            or estimate_parents_neighbors == 'both'):
+    if (estimate_parents_neighbors == 'neighbors' or
+            estimate_parents_neighbors == 'both'):
         if verbosity > 0:
             print("\n" + "-"*60 +
                   "\nEstimating neighbors for all variables:"
@@ -292,7 +361,14 @@ def pc_algo_all(data, estimate_parents_neighbors='both',
 
 
 def _check_parents_neighbors(graph, N):
-    """Checks that graph contains keys for variables and properness of links"""
+    """Checks that graph contains keys for variables and properness of links
+
+    Args:
+        graph (dict): Dictionary containing parents and neighbors of
+            format {..., j:[(var1, lag1), (var2, lag2), ...], ...} for all
+            variables where vars must be in [0..N-1] and lags <= 0.
+        N (int): Number of variables.
+    """
 
     if not isinstance(graph, dict):
         return False
@@ -317,16 +393,38 @@ def _check_parents_neighbors(graph, N):
 
 
 class Conditions():
+    """Class to take care of conditions in PC algorithm.
 
+    Attributes:
+        checked_conds (list): List of already checked conditions.
+        parents (list): Parents in format [(var1, lag1), (var2, lag2), ...]
+            with lags <= 0.
+    """
     def __init__(self, parents):
+        """Assign variables.
+
+        Args:
+            parents (dict): Parents in format [(var1, lag1), (var2, lag2), ...]
+                with lags <= 0.
+        """
+
         self.parents = parents
         self.checked_conds = []
 
     def next_condition(self, dim, check_only=False):
-        # print 'len(self.parents),  self.dim ', len(self.parents),  dim
-        # if len(self.parents) > self.dim:
+        """Return next combination of conditions.
+
+        Args:
+            dim (int): Cardinality of conditions.
+            check_only (bool, optional): If True only a boolean is returned and
+                not a list of conditions.
+
+        Returns:
+            list or bool: List of conditions or bool indicating whether some
+                condition combinations are still to be checked.
+        """
+
         for comb in itertools.combinations(self.parents, dim):
-            # print 'comb ', list(comb), self.checked_conds
             if set(list(comb)) not in self.checked_conds:
                 if check_only is False:
                     self.checked_conds.append(set(list(comb)))
@@ -337,9 +435,26 @@ class Conditions():
         return False
 
     def update(self, parents):
+        """Update parents.
+
+        Args:
+            parents (list): Parents in format [(var1, lag1), (var2, lag2), ...]
+                with lags <= 0.
+
+        """
         self.parents = parents
 
     def check_convergence(self, dim):
+        """Checks whether all combinations habe been tested for condition
+            cardinality dim.
+
+        Args:
+            dim (int): Cardinality of conditions.
+
+        Returns:
+            bool: True if all combinations habe been tested.
+        """
+
         if self.next_condition(dim, check_only=True) is False:
             return True
         else:
@@ -357,6 +472,54 @@ def _pc_algo(data, j,
              measure_params=None,
              mask=False, mask_type=None, data_mask=None,
              verbosity=0):
+    """Implementation of PC algorithm as described in Runge et al. PRL (2012).
+
+    Here the parents/neighbors of one variable j are estimated only.
+
+    Args:
+        data (array, optional): Data array of shape (time, variables).
+        j (int): Index of variable for which algorithm is run.
+        parents_or_neighbors (str, optional): Whether to estimate
+            'parents' or 'neighbors'.
+        initial_parents_neighbors (dict, optional): False or None to
+            start from fully connected graph, else a dictionary of format
+            {..., j:[(var1, lag1), (var2, lag2), ...], ...} for all variables
+            where vars must be in [0..N-1] and lags <= 0.
+        all_parents (dict, optional): False or None to
+            start from fully connected graph, else a dictionary of format
+            {..., j:[(var1, lag1), (var2, lag2), ...], ...} for all variables
+            where vars must be in [0..N-1] and lags <= 0.
+        tau_min (int, optional): Minimum time delay.
+        tau_max (int, optional): Maximum time delay.
+        initial_conds (int, optional): Initial number of conditions.
+        max_conds (int, optional): Maximum number of conditions.
+        max_trials (int, optional): Maximum number of combinations per
+            dimension.
+        measure (str, optional): Measure of dependence, currently 'par_corr',
+            'reg', 'cmi_knn', 'cmi_symb', 'cmi_gauss' are supported.
+        measure_params (dict, optional): Parameters for dependence
+            measures.
+        significance (bool or str, optional): Type of significance test,
+            either False or 'analytic', 'full_shuffle', 'fixed'.
+        sig_lev (float, optional): Significance level (eg, 0.95).
+        sig_samples (int, optional): Number of samples for shuffle significance
+            test.
+        fixed_thres (float, optional): Fixed significance threshold.
+        mask (bool, optional): Whether to use masked data.
+        mask_type (list, optional): Can be ['x', 'y', 'z'] or either of these
+            strings to mark for which variables in the dependence measure
+            I(X; Y | Z) the samples should be masked.
+        data_mask (bool array, optional): Data mask where False labels masked
+            samples.
+        verbosity (int, optional): Level of verbosity.
+
+    Returns:
+        List of parents/neighbors for variable j in format
+            [(var1, lag1), (var2, lag2), ...] with lags <= 0.
+
+    Raises:
+        ValueError: Some parameter checks.
+    """
 
     T, N = data.shape
 
@@ -366,9 +529,8 @@ def _pc_algo(data, j,
         measure = 'par_corr'
 
     if (measure == 'cmi_knn'):
-        if (measure_params is None
-           or type(measure_params) != dict
-           or 'knn' not in measure_params.keys()):
+        if (measure_params is None or type(measure_params) != dict or
+                'knn' not in measure_params.keys()):
             raise ValueError("measure_params must be dictionary "
                              "containing key 'knn'. "
                              "Recommended value 'knn':10.")
@@ -378,8 +540,9 @@ def _pc_algo(data, j,
     elif parents_or_neighbors == 'parents':
         tau_min = max(1, tau_min)
         if tau_max < tau_min:
-            raise ValueError("tau_max = %d, tau_min = %d," % (tau_max, tau_min)
-                             + " but tau_max >= tau_min > 0 to estimate "
+            raise ValueError("tau_max = %d, tau_min = %d," % (tau_max,
+                             tau_min) +
+                             " but tau_max >= tau_min > 0 to estimate "
                              "parents")
     else:
         raise ValueError("parents_or_neighbors must be either 'parents' or"
@@ -412,11 +575,10 @@ def _pc_algo(data, j,
 
     if verbosity > 1:
         print("\n    " + "-"*60 +
-              "\n    Estimating %s for variable %d :" % (parents_or_neighbors, 
-                                                         j)
-              + "\n    " + "-"*60)
+              "\n    Estimating %s for var %d :" % (parents_or_neighbors,
+                                                    j) + "\n    " + "-"*60)
         if initial_parents_neighbors is not None:
-            print("    ckecking only nodes %s" % str(nodes_and_estimates.keys()))
+            print("    ckecking only %s" % str(nodes_and_estimates.keys()))
 
     conds_dim = 0
     while conds_dim < len(sorted_nodes) and conds_dim <= max_conds:
@@ -427,11 +589,6 @@ def _pc_algo(data, j,
                       " = %d:" % conds_dim)
             else:
                 print("\n    Number of conditions = %d:" % conds_dim)
-
-        # print 'strongest ', sorted_nodes
-
-        # Reset values
-        # nodes_and_estimates = dict.fromkeys(nodes_and_estimates, numpy.infty)
 
         comb_index = 0
         while comb_index < max_trials:
@@ -540,7 +697,7 @@ def _pc_algo(data, j,
                 break
             else:
                 if verbosity > 1:
-                    print("\n    Yes --> returning to conds_dim = len(nodes)-1")
+                    print("\n    Yes --> returning to dim = len(nodes)-1")
                 conds_dim = len(sorted_nodes)-1
 
     if verbosity > 1:
@@ -572,7 +729,6 @@ def _pc_algo(data, j,
                 significance=False,
                 measure_params=measure_params,
                 verbosity=0)['cmi'][[-tau]])
-            # print nodes_and_estimates[(i, tau)]
 
         sorted_nodes = sorted(nodes_and_estimates,
                               key=nodes_and_estimates.get, reverse=True)
@@ -594,9 +750,10 @@ def _get_conditions(parents_neighbors, i, j,
                     cond_mode='none',
                     contemp=False,
                     max_conds=4):
-    """
-    get conditions for cond_mode = 'none' (MI), 'parents_xy' (MIT),
-    'parents_y' (ITY), 'parents_x' (ITX) ...
+    """Return condition set.
+
+    Get conditions for cond_mode = 'none' (MI), 'parents_xy' (MIT),
+    'parents_y' (ITY), 'parents_x' (ITX).
 
     NOTE: only up to max_conds conditions are used.
     This is the number of conditions used for both X and Y.
@@ -606,11 +763,21 @@ def _get_conditions(parents_neighbors, i, j,
     number of neighbors as well as the number of parents per neighbor
     leading to 2*max_conds + 2*max_conds*max_conds.
 
-    :type cond_mode: str
-    :param cond_mode: selected conditions type
+    Args:
+        parents_neighbors (dict): Dictionary of format
+            {..., j:[(var1, lag1), (var2, lag2), ...], ...} for all variables
+            where vars must be in [0..N-1] and lags <= 0.
+        i (int): Index of variable X in measure I(X; Y | Z).
+        j (int): Index of variable Y in measure I(X; Y | Z).
+        cond_mode (str, optional): Conditioning mode, must be one of 'none',
+            'parents_x', 'parents_y', 'parents_xy'.
+        contemp (bool, optional): Whether i and j are contemporaneous and also
+            neighbors should be included.
+        max_conds (int, optional): Maximum number of conditions.
 
-    :type i: int
-    :param i: process index (driver)
+    Returns:
+        Tuple of conditions for i and j in format
+            [(var1, lag1), (var2, lag2), ...] with lags <= 0.
     """
 
     # Parents of X (node i)
@@ -656,10 +823,45 @@ def get_lagfunctions(data, selected_variables=None, parents_neighbors=None,
                      mask=False, mask_type=None, data_mask=None,
                      verbosity=0
                      ):
-    """Function that estimates the MI, MIT, ITY, ... for all pairs (i, j).
+    """Function that returns lag functions for all pairs (i, j).
 
-    :rtype: dictionary
-    :returns: results
+    Args:
+        data (array, optional): Data array of shape (time, variables).
+        selected_variables (list, optional): False or list of variable indices
+            to run algorithm on.
+        parents_neighbors (None, optional): Description
+        cond_mode (str, optional): Conditioning mode, must be one of 'none',
+            'parents_x', 'parents_y', 'parents_xy'.
+        solid_contemp_links (bool, optional): Type of contemporaneous links,
+            see References for further information.
+        tau_max (int, optional): Maximum time delay.
+        max_conds (int, optional): Maximum number of conditions.
+        measure (str, optional): Measure of dependence, currently 'par_corr',
+            'reg', 'cmi_knn', 'cmi_symb', 'cmi_gauss' are supported.
+        measure_params (dict, optional): Parameters for dependence
+            measures.
+        significance (bool or str, optional): Type of significance test,
+            either False or 'analytic', 'full_shuffle', 'fixed'.
+        sig_lev (float, optional): Significance level (eg, 0.95).
+        sig_samples (int, optional): Number of samples for shuffle significance
+            test.
+        fixed_thres (float, optional): Fixed significance threshold.
+        mask (bool, optional): Whether to use masked data.
+        mask_type (list, optional): Can be ['x', 'y', 'z'] or either of these
+            strings to mark for which variables in the dependence measure
+            I(X; Y | Z) the samples should be masked.
+        data_mask (bool array, optional): Data mask where False labels masked
+            samples.
+        confidence (bool or string, optional): Type of confidence test,
+            either False or 'analytic' or 'bootstrap'.
+        conf_lev (float, optional): Two-sided confidence level (eg, 0.9).
+        conf_samples (int, optional): Number of samples for bootstrap.
+        verbosity (int, optional): Description
+
+    Returns:
+        Tuple of three arrays of shape (N, tau_max + 1) for lag functions,
+            significance thresholds and confidence intervals (here of shape
+            (N, tau_max + 1, 2)).
     """
 
     T, N = data.shape
@@ -684,6 +886,7 @@ def get_lagfunctions(data, selected_variables=None, parents_neighbors=None,
         selected_variables = range(N)
 
     def calc(j, contemp_only=False):
+        """Wrapper to return results for variable j."""
 
         if contemp_only:
             tau_max_here = 0
@@ -749,19 +952,12 @@ def get_lagfunctions(data, selected_variables=None, parents_neighbors=None,
              sig_thres[:, j, 0],
              confs[:, j, 0]) = (res[0][:, 0], res[1][:, 0], res[2][:, 0])
 
-    # if ('cmi' in measure and measure_params['rescale_cmi']):
-    #     lagfuncs = _par_corr_trafo(lagfuncs)
-    #     sig_thres = _par_corr_trafo(sig_thres)
-    #     confs = _par_corr_trafo(confs)
-
     return lagfuncs, sig_thres, confs
 
 
 ##
 # Helper functions
 ##
-
-
 def _calculate_lag_function(measure, data, data_mask=None,
                             mask=False,
                             mask_type=None, min_samples=20,
@@ -774,13 +970,45 @@ def _calculate_lag_function(measure, data, data_mask=None,
                             confidence=False, conf_lev=0.95,
                             conf_samples=100,
                             verbosity=0):
-    """
-    Wrapper around measure estimation to compute lag function
-    and take care of masks, ...
+    """Wrapper around measure estimators to compute lag function.
 
-    :rtype: dictionary of arrays
-    :returns: dictionary of arrays with CMIs / partial correlations
+    Args:
+        measure (str, optional): Measure of dependence, currently 'par_corr',
+            'reg', 'cmi_knn', 'cmi_symb', 'cmi_gauss' are supported.
+        data (array, optional): Data array of shape (time, variables).
+        data_mask (bool array, optional): Data mask where False labels masked
+            samples.
+        mask_type (list, optional): Can be ['x', 'y', 'z'] or either of these
+            strings to mark for which variables in the dependence measure
+            I(X; Y | Z) the samples should be masked.
+        min_samples (int, optional): Minimum number of samples to accept,
+            otherwise NaNs are returned.
+        var_x (int, optional): Index of variable X in the dependence measure
+            I(X; Y | Z)
+        var_y (int, optional): Index of variable Y in the dependence measure
+            I(X; Y | Z)
+        conds_x (list, optional): Conditions for variable X
+        conds_y (list, optional): Conditions for variable Y
+        measure_params (dict, optional): Parameters for dependence
+            measures.
+        tau_max (int, optional): Maximum time delay.
+        selected_lags (bool or list, optional): Whether to compute measure only
+            at selected lags.
+        significance (bool or str, optional): Type of significance test,
+                    either False or 'analytic', 'full_shuffle', 'fixed'.
+        sig_lev (float, optional): Significance level (eg, 0.95).
+        sig_samples (int, optional): Number of samples for shuffle significance
+            test.
+        fixed_thres (float, optional): Fixed significance threshold.
+        confidence (bool or string, optional): Type of confidence test,
+            either False or 'analytic' or 'bootstrap'.
+        conf_lev (float, optional): Two-sided confidence level (eg, 0.9).
+        conf_samples (int, optional): Number of samples for bootstrap.
+        verbosity (int, optional): Level of verbosity.
 
+    Returns:
+        Dictionary of lag functions and associated significance thresholds,
+            confidence intervals, and p-values.
     """
 
     if conds_x is None:
@@ -864,16 +1092,43 @@ def _calculate_lag_function(measure, data, data_mask=None,
 
             print(printstr)
 
-    return {'cmi': cmi, 'cmi_sig': cmi_sig, 
+    return {'cmi': cmi, 'cmi_sig': cmi_sig,
             'cmi_conf': cmi_conf, 'cmi_pval': cmi_pval}
 
 
 def _construct_array(X, Y, Z, tau_max, data, mask=False,
                      data_mask=None, mask_type=None,
                      verbosity=0):
-    """Returns array containing ( (X, Y, Z), samples) and XYZ identifier"""
+    """Returns array of shape (dim, T) containing and XYZ identifier.
+
+    Args:
+        X (list): List of variable indices of X in the dependence measure
+            I(X; Y | Z).
+        Y (list): List of variable indices of Y in the dependence measure
+            I(X; Y | Z).
+        Z (list): List of variable indices of Z in the dependence measure
+            I(X; Y | Z).
+        tau_max (int, optional): Maximum time delay.
+        data (array, optional): Data array of shape (time, variables).
+        mask (bool, optional): Whether to use masked data.
+        mask_type (list, optional): Can be ['x', 'y', 'z'] or either of these
+            strings to mark for which variables in the dependence measure
+            I(X; Y | Z) the samples should be masked.
+        data_mask (bool array, optional): Data mask where False labels masked
+            samples.
+        verbosity (int, optional): Level of verbosity.
+
+    Returns:
+        Tuple of data array of shape (dim, T) and XYZ identifier array of
+            shape (dim,).
+
+    Raises:
+        ValueError: Some checks.
+    """
 
     def uniq(input):
+        """Return uniquified list."""
+
         output = []
         for x in input:
             if x not in output:
@@ -909,8 +1164,8 @@ def _construct_array(X, Y, Z, tau_max, data, mask=False,
     if numpy.any(numpy.array(XYZ)[:, 1] > 0):
         raise ValueError("nodes are %s, " % str(XYZ) +
                          "but all lags must be non-positive")
-    if (numpy.any(numpy.array(XYZ)[:, 0] >= N)
-       or numpy.any(numpy.array(XYZ)[:, 0] < 0)):
+    if (numpy.any(numpy.array(XYZ)[:, 0] >= N) or
+            numpy.any(numpy.array(XYZ)[:, 0] < 0)):
         raise ValueError("variable indices %s," % str(numpy.array(XYZ)[:, 0]) +
                          " but must be in [0, %d]" % (N-1))
     if numpy.all(numpy.array(Y)[:, 1] < 0):
@@ -925,7 +1180,7 @@ def _construct_array(X, Y, Z, tau_max, data, mask=False,
                       [2 for i in range(len(Z))])
 
     # Setup and fill array with lagged time series
-    array = numpy.zeros((dim, T - max_lag), dtype = data_type)
+    array = numpy.zeros((dim, T - max_lag), dtype=data_type)
     for i, node in enumerate(XYZ):
         var, lag = node
         array[i, :] = data[max_lag + lag: T + lag, var]
@@ -933,7 +1188,7 @@ def _construct_array(X, Y, Z, tau_max, data, mask=False,
     if mask:
         # Remove samples with data_mask == 0
         # conditional on which mask_type is used
-        array_mask = numpy.zeros((dim, T - max_lag), dtype ='int32')
+        array_mask = numpy.zeros((dim, T - max_lag), dtype='int32')
         for i, node in enumerate(XYZ):
             var, lag = node
             array_mask[i, :] = data_mask[max_lag + lag: T + lag, var]
@@ -960,7 +1215,7 @@ def _construct_array(X, Y, Z, tau_max, data, mask=False,
     return array, xyz
 
 
-def _get_estimate(array, measure, xyz, measure_params, 
+def _get_estimate(array, measure, xyz, measure_params,
                   significance=False,
                   sig_samples=1000,
                   sig_lev=0.95,
@@ -969,7 +1224,38 @@ def _get_estimate(array, measure, xyz, measure_params,
                   conf_samples=100,
                   conf_lev=0.9,
                   verbosity=0):
+    """Wrapper function around individual estimators.
 
+    For selected measures analytical estimates of significance and confidence
+    are returned. If these are not available, None is returned instead.
+
+    Args:
+        array (array, optional): Data array of shape (dim, T).
+        measure (str, optional): Measure of dependence, currently 'par_corr',
+            'reg', 'cmi_knn', 'cmi_symb', 'cmi_gauss' are supported.
+        xyz (array): XYZ identifier array of shape (dim,).
+        measure_params (dict, optional): Parameters for dependence
+            measures.
+        significance (bool or str, optional): Type of significance test,
+            either False or 'analytic', 'full_shuffle', 'fixed'.
+        sig_lev (float, optional): Significance level (eg, 0.95).
+        sig_samples (int, optional): Number of samples for shuffle significance
+            test.
+        fixed_thres (float, optional): Fixed significance threshold.
+
+        confidence (bool or string, optional): Type of confidence test,
+            either False or 'analytic' or 'bootstrap'.
+        conf_lev (float, optional): Two-sided confidence level (eg, 0.9).
+        conf_samples (int, optional): Number of samples for bootstrap.
+        verbosity (int, optional): Level of verbosity.
+
+    Returns:
+        Dictionary of estimate, p-value, significance threshold, and lower and
+            upper confidence bounds.
+
+    Raises:
+        ValueError: Some checks.
+    """
     dim, T = array.shape
 
     # confidence interval is two-sided
@@ -986,55 +1272,50 @@ def _get_estimate(array, measure, xyz, measure_params,
 
         # Confidence level
         value_tdist = val*numpy.sqrt(T-dim) / numpy.sqrt(1.-val**2)
-        conf_lower = (stats.t.ppf(q=1.-c_int, df=T-dim, loc=value_tdist)
-                 / numpy.sqrt(T-dim + stats.t.ppf(q=1.-c_int, df=T-dim,
-                                                  loc=value_tdist)**2))
-        conf_upper = (stats.t.ppf(q=c_int, df=T-dim, loc=value_tdist)
-                 / numpy.sqrt(T-dim + stats.t.ppf(q=c_int, df=T-dim,
-                                                  loc=value_tdist)**2))
+        conf_lower = (stats.t.ppf(q=1.-c_int, df=T-dim, loc=value_tdist) /
+                      numpy.sqrt(T-dim + stats.t.ppf(q=1.-c_int, df=T-dim,
+                                                     loc=value_tdist)**2))
+        conf_upper = (stats.t.ppf(q=c_int, df=T-dim, loc=value_tdist) /
+                      numpy.sqrt(T-dim + stats.t.ppf(q=c_int, df=T-dim,
+                                                     loc=value_tdist)**2))
 
     elif measure == 'reg':
         # Partial regression and 2-sided p-value
-        val, pval, coeff_error, resid_error = _estimate_standardized_regression(
+        (val, pval, coeff_error,
+         resid_error) = _estimate_standardized_regression(
             array=numpy.copy(array), verbosity=verbosity)
 
         # Significance threshold
         # Here the degrees of freedom are minus one because of the intercept
-        df = T - dim
-        sig_thres = stats.t.ppf(sig_lev, df-1) * coeff_error
+        df = T - dim - 1
+        sig_thres = stats.t.ppf(sig_lev, df=df) * coeff_error
 
         # Confidence level
-        conf_lower = (stats.t.ppf(q=1.-c_int, df=T-dim-1,
-                             loc=val/coeff_error) * coeff_error)
-        conf_upper = (stats.t.ppf(q=c_int, df=T-dim-1,
-                             loc=val/coeff_error) * coeff_error)
+        conf_lower = (stats.t.ppf(q=1.-c_int, df=df,
+                                  loc=val/coeff_error) * coeff_error)
+        conf_upper = (stats.t.ppf(q=c_int, df=df,
+                                  loc=val/coeff_error) * coeff_error)
 
     elif measure == 'cmi_gauss':
         tmpval, pval = _estimate_partial_correlation(
                                 array=numpy.copy(array))
-        val =  _par_corr_to_cmi(tmpval)
+        val = _par_corr_to_cmi(tmpval)
 
         # Significance threshold
         df = T - dim
-        sig_thres = _par_corr_to_cmi(stats.t.ppf(
-            sig_lev, df) / numpy.sqrt(df + stats.t.ppf(sig_lev, df) ** 2))
-        
+        tmp = stats.t.ppf(sig_lev, df)
+        sig_thres = _par_corr_to_cmi((tmp) / numpy.sqrt(df + tmp ** 2))
+
         # Confidence level
-        value_tdist = numpy.abs(tmpval)*numpy.sqrt(T-dim) / numpy.sqrt(1.-tmpval**2)
-        conf_lower = _par_corr_to_cmi((stats.t.ppf(q=1.-c_int, df=T-dim, 
-                                              loc=value_tdist)
-                 / numpy.sqrt(T-dim + stats.t.ppf(q=1.-c_int, df=T-dim,
-                                              loc=value_tdist)**2)))
-        conf_upper = _par_corr_to_cmi((stats.t.ppf(q=c_int, df=T-dim,
-                                              loc=value_tdist)
-                 / numpy.sqrt(T-dim + stats.t.ppf(q=c_int, df=T-dim,
-                                              loc=value_tdist)**2)))
+        value_tdist = (numpy.abs(tmpval)*numpy.sqrt(T-dim) /
+                       numpy.sqrt(1.-tmpval**2))
+        tmp = stats.t.ppf(q=1.-c_int, df=df, loc=value_tdist)
+        conf_lower = _par_corr_to_cmi((tmp / numpy.sqrt(T-dim + tmp**2)))
+        tmp = stats.t.ppf(q=c_int, df=df, loc=value_tdist)
+        conf_upper = _par_corr_to_cmi((tmp / numpy.sqrt(T-dim + tmp**2)))
 
-    ##
-    ##  For the non-parametric approaches the significance statistics
-    ##  are optionally computed below
-    ##
-
+    #  For the non-parametric approaches the significance statistics
+    #  are optionally computed below
     elif measure == 'cmi_knn':
         if verbosity > 3:
             print("\tEsimate using knn = %d" % measure_params['knn'])
@@ -1052,33 +1333,30 @@ def _get_estimate(array, measure, xyz, measure_params,
         pval = None
         sig_thres = None
         conf_lower = None
-        conf_upper = None   
+        conf_upper = None
 
     else:
         raise ValueError("Measure not found.")
 
-
-    ##
-    ## If a shuffly-type significance or bootstrap confidence is chosen, 
-    ## the p-values and so on are overwritten
-    ##
+    # If a shuffle-type significance or bootstrap confidence is chosen,
+    # the p-values and so on are overwritten
     if significance:
         if significance == 'analytic':
             if measure in ['cmi_knn', 'cmi_symb']:
                 raise ValueError("Analytic significance not available for "
-                                 "%s!" % measure )
+                                 "%s!" % measure)
             else:
                 pass
 
         elif 'shuffle' in significance:
 
-            null_dist = _get_shuffle_dist(array=array, 
-                                     xyz=xyz, 
-                                     significance=significance,
-                                     measure=measure,
-                                     sig_samples=sig_samples,
-                                     measure_params=measure_params,
-                                     verbosity=verbosity)
+            null_dist = _get_shuffle_dist(array=array,
+                                          xyz=xyz,
+                                          significance=significance,
+                                          measure=measure,
+                                          sig_samples=sig_samples,
+                                          measure_params=measure_params,
+                                          verbosity=verbosity)
 
             pval = (null_dist >= val).mean()
             sig_thres = null_dist[sig_lev*sig_samples]
@@ -1096,7 +1374,6 @@ def _get_estimate(array, measure, xyz, measure_params,
                                 array=numpy.copy(array),
                                 k=measure_params['knn'], xyz=xyz)
 
-
         bootdist = numpy.zeros(conf_samples)
         for sam in range(conf_samples):
 
@@ -1109,45 +1386,50 @@ def _get_estimate(array, measure, xyz, measure_params,
             else:
                 array_bootstrap = array[:, numpy.random.randint(0, T, T)]
                 bootdist[sam] = _get_estimate(array=array_bootstrap,
-                                        measure=measure, xyz=xyz,
-                                        measure_params=measure_params)['value']
-                # if measure == 'par_corr':
-                #     bootdist[sam] = _estimate_partial_correlation(
-                #         array=array_bootstrap)[0]
-                # elif measure == 'cmi_gauss':
-                #     bootdist[sam] = _par_corr_to_cmi(
-                #         _estimate_partial_correlation(
-                #             array=array_bootstrap)[0])
-                # elif measure == 'reg':
-                #     bootdist[sam] = _estimate_standardized_regression(
-                #         array=array_bootstrap)[0]
-                # elif measure == 'cmi_symb':
-                #     bootdist[sam] = _estimate_cmi_symb(
-                #         array=array_bootstrap, xyz=xyz)
+                                              measure=measure, xyz=xyz,
+                                              measure_params=measure_params
+                                              )['value']
 
         # Sort and get quantile
         bootdist.sort()
         conf_lower = bootdist[(1. - c_int) * conf_samples]
         conf_upper = bootdist[c_int * conf_samples]
 
-
-    return {'value':val, 'pvalue':pval, 
-            'sig_thres':sig_thres, 
-            'conf_lower':conf_lower,
-            'conf_upper':conf_upper}
+    return {'value': val,
+            'pvalue': pval,
+            'sig_thres': sig_thres,
+            'conf_lower': conf_lower,
+            'conf_upper': conf_upper}
 
 
 def _get_shuffle_dist(array, xyz, significance, measure,
-                       sig_samples,
-                       measure_params=None,
-                       verbosity=0):
+                      sig_samples,
+                      measure_params=None,
+                      verbosity=0):
+    """Returns array of sorted shuffle significance estimates.
 
+    Args:
+        array (array, optional): Data array of shape (dim, T).
+        xyz (array): XYZ identifier array of shape (dim,).
+        significance (bool or str, optional): Type of significance test,
+            either False or 'analytic', 'full_shuffle', 'fixed'.
+        measure (str, optional): Measure of dependence, currently 'par_corr',
+            'reg', 'cmi_knn', 'cmi_symb', 'cmi_gauss' are supported.
+        measure_params (dict, optional): Parameters for dependence
+            measures.        sig_samples (TYPE): Description
+        verbosity (int, optional): Level of verbosity.
+
+    Returns:
+        Array of sorted shuffle significance estimates.
+
+    Raises:
+        ValueError: Some checks.
+    """
     dim, T = array.shape
 
     # max_neighbors = max(1, int(max_neighbor_ratio*T))
     x_indices = numpy.where(xyz == 0)[0]
     z_indices = numpy.where(xyz == 2)[0]
-
 
     if significance == 'full_shuffle':
 
@@ -1163,10 +1445,10 @@ def _get_shuffle_dist(array, xyz, significance, measure,
             for i in x_indices:
                 array_shuffled[i] = array[i, perm]
 
-
             null_dist[sam] = _get_estimate(array=array_shuffled,
-                                        measure=measure, xyz=xyz,
-                                        measure_params=measure_params)['value']
+                                           measure=measure, xyz=xyz,
+                                           measure_params=measure_params
+                                           )['value']
 
         # Sort and get quantile
         null_dist.sort()
@@ -1179,8 +1461,19 @@ def _get_shuffle_dist(array, xyz, significance, measure,
     else:
         raise ValueError("Significance shuffle test must be 'full_shuffle'")
 
-def _get_parents(nodes, exclude=None):
 
+def _get_parents(nodes, exclude=None):
+    """Returns list of parents, i.e., excluding zero lags.
+
+    Args:
+        nodes (list): List of parents/neighbors for variable j in format
+            [(var1, lag1), (var2, lag2), ...] with lags <= 0.
+
+        exclude (tuple, optional): Optionally exclude a certain node.
+
+    Returns:
+        List of parents.
+    """
     graph = []
     for var, lag in nodes:
         if lag != 0 and (var, lag) != exclude:
@@ -1190,7 +1483,17 @@ def _get_parents(nodes, exclude=None):
 
 
 def _get_neighbors(nodes, exclude=None):
+    """Returns list of neighbors, i.e., including only zero lags.
 
+    Args:
+        nodes (list): List of parents/neighbors for variable j in format
+            [(var1, lag1), (var2, lag2), ...] with lags <= 0.
+
+        exclude (tuple, optional): Optionally exclude a certain node.
+
+    Returns:
+        List of neighbors.
+    """
     graph = []
     for var, lag in nodes:
         if lag == 0 and (var, lag) != exclude:
@@ -1200,10 +1503,16 @@ def _get_neighbors(nodes, exclude=None):
 
 
 def _par_corr_trafo(cmi):
-    """Transformation of conditional mutual information to partial correlation
-       scale using the (multivariate) Gaussian assumption.
-    """
+    """Transformation of CMI to partial correlation scale.
 
+    Using the (multivariate) Gaussian assumption.
+
+    Args:
+        cmi (float): CMI value.
+
+    Returns:
+        Rescaled value.
+    """
     # Set negative values to small positive number
     # (zero would be interpreted as non-significant in some functions)
     if numpy.ndim(cmi) == 0:
@@ -1216,8 +1525,15 @@ def _par_corr_trafo(cmi):
 
 
 def _par_corr_to_cmi(par_corr):
-    """Transformation of partial correlation to conditional mutual information
-       scale using the (multivariate) Gaussian assumption.
+    """Transformation of partial correlation to CMI scale.
+
+    Using the (multivariate) Gaussian assumption.
+
+    Args:
+        par_corr (float): par_corr value.
+
+    Returns:
+        Rescaled value.
     """
 
     return -0.5*numpy.log(1. - par_corr**2)
@@ -1228,18 +1544,19 @@ def _par_corr_to_cmi(par_corr):
 ##
 
 def _estimate_partial_correlation(array):
-    """Returns the partial correlation of y and x, conditioning on
-    confounds of shape (dim, T).
+    """Returns the partial correlation using scipy.stats.pearsonr.
 
-    The first two indices of array are assumed to be X and Y.
+    The first two indices of array are assumed to be X and Y, the others are Z.
 
-    :type array: array
-    :param array: data array of shape (dim, T)
+    Args:
+        array (array, optional): Data array of shape (dim, T).
 
-    :rtype: float
-    :returns: partial correlation
+    Returns:
+        Tuple of estimate and p-value.
+
+    Raises:
+        ValueError: Some checks.
     """
-
     D, T = array.shape
     if numpy.isnan(array).sum() != 0:
         raise ValueError("nans in the array!")
@@ -1263,16 +1580,20 @@ def _estimate_partial_correlation(array):
 
 
 def _estimate_standardized_regression(array, standardize=True, verbosity=0):
-    """Returns the partial regression of y and x, conditionning on
-    confounds of shape (dim, T).
+    """Returns the standardized regression using statsmodels.
 
-    The first two indices of array are assumed to be X and Y.
+    The first two indices of array are assumed to be X and Y, the others are Z.
 
-    :type array: array
-    :param array: data array of shape (dim, T)
+    Args:
+        array (array, optional): Data array of shape (dim, T).
+        standardize (bool, optional): Whether to standardize data before.
+        verbosity (int, optional): Level of verbosity.
 
-    :rtype: float
-    :returns: partial regression
+    Returns:
+        Tuple of estimate, p-value, standard error and residual error.
+
+    Raises:
+        ValueError: Some checks.
     """
 
     try:
@@ -1308,28 +1629,24 @@ def _estimate_standardized_regression(array, standardize=True, verbosity=0):
     return parameter, pvalue, standard_error, resid_error
 
 
-
 def _get_nearest_neighbors(array, xyz, k, standardize=True):
+    """Returns nearest neighbors according to Frenzel and Pompe (2007).
 
-    """Retreives the distances eps to the k-th nearest neighbors for every sample
-       in joint space XYZ and returns the numbers of nearest neighbors within eps
-       in subspaces Z, XZ, YZ.
+    Retrieves the distances eps to the k-th nearest neighbors for every sample
+    in joint space XYZ and returns the numbers of nearest neighbors within eps
+    in subspaces Z, XZ, YZ.
 
+    Args:
+        array (array, optional): Data array of shape (dim, T).
+        xyz (array): XYZ identifier array of shape (dim,).
+        k (int): Number of nearest neighbors in joint space.
+        standardize (bool, optional): Whether to standardize data before.
 
-    :type array: array
-    :param array: data array of shape (dim, T)
+    Returns:
+        Tuple of nearest neighbor arrays for X, Y, and Z.
 
-    :type array: xyz
-    :param array: indicator array of shape (dim,)
-
-    :type k: int
-    :param k: number of nearest neighbors in joint space
-
-    :type standardize: bool
-    :param standardize: whether to standardize data before
-
-    :rtype: tuple of arrays
-    :returns: arrays of nearest neighbors for each point in array
+    Raises:
+        ValueError: Description
     """
 
     dim, T = array.shape
@@ -1346,13 +1663,14 @@ def _get_nearest_neighbors(array, xyz, k, standardize=True):
                              "possibly constant array!")
 
     # Add noise to destroy ties...
-    array += (1E-6 * array.std(axis=1).reshape(dim, 1)
-              * numpy.random.rand(array.shape[0], array.shape[1]))
+    array += ((1E-6 * array.std(axis=1).reshape(dim, 1) *
+               numpy.random.rand(array.shape[0], array.shape[1])))
 
-    # Use cKDTree to get distances eps to the k-th nearest neighbors for every sample
-    # in joint space XYZ with maximum norm
+    # Use cKDTree to get distances eps to the k-th nearest neighbors
+    # for every sample in joint space XYZ with maximum norm
     tree_xyz = spatial.cKDTree(array.T)
-    epsarray = tree_xyz.query(array.T, k=k+1, p=numpy.inf, eps=0.)[0][:,k].astype('float32')
+    epsarray = tree_xyz.query(array.T, k=k+1, p=numpy.inf, eps=0.
+                              )[0][:,k].astype('float32')
 
     # Prepare for fast weave.inline access
     array = array.flatten()
@@ -1432,81 +1750,50 @@ def _get_nearest_neighbors(array, xyz, k, standardize=True):
     return k_xz, k_yz, k_z
 
 
-def _estimate_cmi_knn(array, k, xyz, norm=0, standardize=True,
+def _estimate_cmi_knn(array, k, xyz, standardize=True,
                       verbosity=0):
-    """Estimation of CMI I(X;Y|Z) as in S. Frenzel and B. Pompe,
-    Phys. Rev. Lett. 99, 204101 (2007).
+    """Returns CMI estimate as described in Frenzel and Pompe PRL (2007).
 
-    :type array: array
-    :param array: input data in shape (maxdim, T)
+    Args:
+        array (array, optional): Data array of shape (dim, T).
+        xyz (array): XYZ identifier array of shape (dim,).
+        standardize (bool, optional): Whether to standardize data before.
+        k (int): Number of nearest neighbors in joint space.
+        verbosity (int, optional): Level of verbosity.
 
-    :type k: integer
-    :param k: nearest neighbor parameter
-
-    :type xyz: array
-    :param xyz: xyz=0 stands for X, xyz=1 for Y and xyz=2 for Z
-
-    :type norm: integer
-    :param norm: desired normalization of CMI
-
-    :type standardize: boolean
-    :param standardize: whether to standardize data before estimation
-
-    :type verbosity: integer
-    :param verbosity: verbosity
-
-    :rtype: float
-    :returns: estimated CMI
+    Returns:
+        TYPE: Description
     """
-
     k_xz, k_yz, k_z = _get_nearest_neighbors(array=array, xyz=xyz,
                                              k=k, standardize=standardize)
 
-    ixy_z = (special.digamma(k)
-             + (- special.digamma(k_xz)
-                - special.digamma(k_yz)
-                + special.digamma(k_z)).mean())
+    ixy_z = special.digamma(k) - (special.digamma(k_xz) +
+                                  special.digamma(k_yz) -
+                                  special.digamma(k_z)).mean()
 
-    if norm == 0:
-        cmi = ixy_z
-    elif norm == 1:
-        cmi = numpy.sqrt(1. - numpy.exp(-2. * numpy.maximum(0., ixy_z)))
-    # elif norm == 2: cmi = ixy_z /  (- special.digamma(k_yz) +
-    # special.digamma(k_z)).mean()
+    return ixy_z
 
-    return cmi
 
 class ConfidenceCMIknn():
+    """Class to generate bootstrap confidence intervals.
 
-    def __init__(self, array, k, xyz, norm=0, standardize=True, verbosity=0):
-        """Estimation of CMI I(X;Y|Z) as in S. Frenzel and B. Pompe,
-        Phys. Rev. Lett. 99, 204101 (2007).
+    Attributes:
+        k (int): Number of nearest neighbors in joint space.
+    """
 
-        :type array: array
-        :param array: input data in shape (maxdim, T)
+    def __init__(self, array, k, xyz, standardize=True, verbosity=0):
+        """Class to generate bootstrap confidence intervals.
 
-        :type k: integer
-        :param k: nearest neighbor parameter
-
-        :type xyz: array
-        :param xyz: xyz=0 stands for X, xyz=1 for Y and xyz=2 for Z
-
-        :type norm: integer
-        :param norm: desired normalization of CMI
-
-        :type standardize: boolean
-        :param standardize: whether to standardize data before estimation
-
-        :type verbosity: integer
-        :param verbosity: verbosity
-
-        :rtype: float
-        :returns: estimated CMI
+        Args:
+            array (array, optional): Data array of shape (dim, T).
+            xyz (array): XYZ identifier array of shape (dim,).
+            standardize (bool, optional): Whether to standardize data before.
+            k (int): Number of nearest neighbors in joint space.
+            verbosity (int, optional): Level of verbosity.
         """
 
         dim, self.T = array.shape
         self.k = int(k)
-        self.norm = norm
 
         self.k_xz, self.k_yz, self.k_z = _get_nearest_neighbors(
                                             array=array,
@@ -1515,28 +1802,27 @@ class ConfidenceCMIknn():
                                             standardize=standardize)
 
     def get_single_estimate(self):
-        """Returns a bootstrap estimate of CMI using precomputed
-         k_xz, k_yz, k_z"""
+        """Returns a bootstrap estimate using precomputed nearest neighbors."""
 
         randints = numpy.random.randint(0, self.T, self.T)
-        ixy_z = (special.digamma(self.k)
-                 + (- special.digamma(self.k_xz[randints])
-                    - special.digamma(self.k_yz[randints])
-                    + special.digamma(self.k_z[randints])).mean())
 
-        if self.norm == 0:
-            cmi = ixy_z
-        elif self.norm == 1:
-            cmi = numpy.sqrt(1. - numpy.exp(-2. * numpy.maximum(0., ixy_z)))
-        # elif norm == 2: cmi = ixy_z /  (- special.digamma(k_yz) +
-        # special.digamma(k_z)).mean()
+        ixy_z = (special.digamma(self.k) -
+                 special.digamma(self.k_xz[randints]) -
+                 special.digamma(self.k_yz[randints]) +
+                 special.digamma(self.k_z[randints])).mean()
 
-        return cmi
+        return ixy_z
 
 
 def _get_residuals(array):
-    """Returns residuals of linear multivariate regression of first two rows
-    on remaining rows."""
+    """Returns residuals of linear regression.
+
+    Args:
+        array (array, optional): Data array of shape (dim, T).
+
+    Returns:
+        Tuple of residual arrays.
+    """
 
     x = array[0, :]
     y = array[1, :]
@@ -1555,17 +1841,15 @@ def _get_residuals(array):
 ##
 
 def _plogp_vector(T, grass=False):
-    """
-    Precalculation of p*log(p) needed for entropies.
+    """Precalculation of p*log(p) needed for entropies.
 
-    :type T: float
-    :param T: sample length
+    Args:
+        T (int): Sample length.
+        grass (bool, optional): Whether to use the natural log or Grassberger's
+            estimator (Grassberger Phys Lett A 1988).
 
-    :type grass: bool
-    :param grass: use ln or Grassberger's estimator
-
-    :rtype: array
-    :returns: p*log(p) array from p=1 to p=T
+    Returns:
+        Vectorized p*log(p) function.
     """
 
     gfunc = numpy.zeros(T + 1, dtype='float32')
@@ -1588,75 +1872,69 @@ def _plogp_vector(T, grass=False):
             1, T + 1, 1) * numpy.log(numpy.arange(1, T + 1, 1))
 
     def plogp_func(t):
-
+        """Make function."""
         return gfunc[t]
 
     return numpy.vectorize(plogp_func)
 
 
 def _bincount_hist(symb_array):
+    """Computes histogram from symbolic array.
+
+    The maximum of the symbolic array determines the alphabet/number of bins.
+
+    Args:
+        symb_array (int array): Data array of shape (dim, T).
+
+    Returns:
+        Histogram array of shape (base, base, base, ...)*number of dimensions
+            with Z-dimensions coming first.
+
+    Raises:
+        ValueError: Some checks.
     """
-    Computes histogram from symbolic array.
 
-    :type symb_array: array of integers
-    :param symb_array: symbolic data
+    bins = int(symb_array.max() + 1)
 
-    :rtype: array
-    :returns: (unnormalized) histogram
-    """
-
-    base = int(symb_array.max() + 1)
-
-    D, T = symb_array.shape
+    dim, T = symb_array.shape
 
     # Needed because numpy.bincount cannot process longs
-    if type(base ** D) != int:
+    if type(bins ** dim) != int:
         raise ValueError("Too many bins and/or dimensions, "
                          "numpy.bincount cannot process longs")
-    if base ** D * 16. / 8. / 1024. ** 3 > 3.:
+    if bins ** dim * 16. / 8. / 1024. ** 3 > 3.:
         raise ValueError("Dimension exceeds 3 GB of necessary "
                          "memory (change this code line if you got more...)")
-    if D * base ** D > 2 ** 65:
+    if dim * bins ** dim > 2 ** 65:
         raise ValueError("base = %d, D = %d: Histogram failed: "
                          "dimension D*base**D exceeds int64 data type"
-                         % (base, D))
+                         % (bins, dim))
 
-    flathist = numpy.zeros((base ** D), dtype='int16')
+    flathist = numpy.zeros((bins ** dim), dtype='int16')
     multisymb = numpy.zeros(T, dtype='int64')
 
-    for i in range(D):
-        multisymb += symb_array[i, :] * base ** i
+    for i in range(dim):
+        multisymb += symb_array[i, :] * bins ** i
 
     result = numpy.bincount(multisymb)
     flathist[:len(result)] += result
 
-    return flathist.reshape(tuple([base, base]
-                                  + [base for i in range(D - 2)])).T
+    return flathist.reshape(tuple([bins, bins] +
+                                  [bins for i in range(dim - 2)])).T
 
 
-def _estimate_cmi_symb(array, xyz, norm=0):
+def _estimate_cmi_symb(array, xyz):
+    """Estimates CMI from symbolic array using histograms.
+
+    The maximum of the symbolic array determines the alphabet/number of bins.
+
+    Args:
+        array (array, optional): Data array of shape (dim, T).
+        xyz (array): XYZ identifier array of shape (dim,).
+
+    Returns:
+        CMI estimate as float.
     """
-    Estimates CMI from symbolic array using histograms.
-
-    :type array: array
-    :param array: input data in shape (maxdim, T)
-
-    :type xyz: array
-    :param xyz: xyz=0 stands for X, xyz=1 for Y and xyz=2 for Z
-
-    :type maxdim: integer
-    :param maxdim: maximum actual dimension
-
-    :type T: integer
-    :param T: sample length
-
-    :type norm: integer
-    :param norm: desired normalization of CMI
-
-    :rtype: float
-    :returns: estimated CMI
-    """
-
     maxdim, T = array.shape
 
     plogp = _plogp_vector(T)
@@ -1675,12 +1953,5 @@ def _estimate_cmi_symb(array, xyz, norm=0):
           plogp(T)) / float(T)
 
     ixy_z = hxz + hyz - hz - hxyz
-#            hx = hxz - hz
-#            hy = hyz - hz
-#        print hxz, '\t', hyz, '\t', hz, '\t', hxyz, '\t', ixy_z
-    if norm == 0:
-        cmi = ixy_z
-    elif norm == 1:
-        cmi = numpy.sqrt(1. - numpy.exp(-2. * numpy.maximum(0., ixy_z)))
 
-    return cmi
+    return ixy_z

@@ -30,7 +30,7 @@ import tigramite_estimation_beta as tigramite_estimation
 # import tigramite_plotting
 
 # import Parallel module (based on mpi4py)
-import tigramite_parallelizer
+import mpi
 
 #  Import NumPy for the array object and fast numerics
 import numpy
@@ -281,7 +281,7 @@ def master():
     for ens in ensemble_members:
         for j in range(d['N']):
 
-            tigramite_parallelizer.submit_call(
+            mpi.submit_call(
                 "tigramite_estimation._pc_algo",
                 kwargs={
                         'data': d['fulldata'][ens],
@@ -311,7 +311,7 @@ def master():
         d['results'][ens] = {'parents_neighbors': {}}
         for j in range(d['N']):
             d['results'][ens]['parents_neighbors'][j] = \
-                tigramite_parallelizer.get_result(id=job_index)
+                mpi.get_result(id=job_index)
             job_index += 1
 
     if d['solid_contemp_links']:
@@ -324,7 +324,7 @@ def master():
         for ens in ensemble_members:
             for j in range(d['N']):
 
-                tigramite_parallelizer.submit_call(
+                mpi.submit_call(
                     "tigramite_estimation._pc_algo",
                     kwargs={
                         'data': d['fulldata'][ens],
@@ -353,7 +353,7 @@ def master():
         for ens in ensemble_members:
             for j in range(d['N']):
                 d['results'][ens]['parents_neighbors'][j] += \
-                    tigramite_parallelizer.get_result(id=job_index)
+                    mpi.get_result(id=job_index)
                 job_index += 1
 
     ###
@@ -383,7 +383,7 @@ def master():
 
             for j in range(d['N']):
 
-                tigramite_parallelizer.submit_call(
+                mpi.submit_call(
                     "tigramite_estimation.get_lagfunctions",
                     kwargs={
                         'selected_variables': [j],
@@ -428,7 +428,7 @@ def master():
 
             for j in range(d['N']):
 
-                res = tigramite_parallelizer.get_result(id=job_index)
+                res = mpi.get_result(id=job_index)
 
                 (d['results'][ens][which][:, j, :],
                  d['results'][ens]['sig_thres_' + which][:, j, :],
@@ -444,4 +444,4 @@ def master():
                         '_results.pkl', 'w'))
 
 
-tigramite_parallelizer.run(verbose=False)
+mpi.run(verbose=False)

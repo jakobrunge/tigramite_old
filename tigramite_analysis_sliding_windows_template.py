@@ -30,7 +30,7 @@ import tigramite_estimation_beta as tigramite_estimation
 import tigramite_plotting
 
 # import Parallel module (based on mpi4py)
-# import tigramite_parallelizer
+# import mpi
 
 #  Import NumPy for the array object and fast numerics
 import numpy
