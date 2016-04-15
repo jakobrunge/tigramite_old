@@ -14,6 +14,7 @@
 # Please cite all references when using the method.
 #
 # Copyright (C) 2012-2016 Jakob Runge <jakobrunge@posteo.de>
+# https://github.com/jakobrunge/tigramite.git
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -38,15 +39,11 @@ import nose.tools as nt
 
 
 def assert_graphs_equal(actual, expected):
-    """Check whether lists in dict are equal"""
-
     for j in expected.keys():
         nt.assert_items_equal(actual[j], expected[j])
 
 
 def _get_parent_graph(nodes, exclude=None):
-    """Returns parents"""
-
     graph = {}
     for j in nodes.keys():
         graph[j] = []
@@ -72,61 +69,48 @@ def _get_neighbor_graph(nodes, exclude=None):
 def cmi2parcorr_trafo(cmi):
     return numpy.sqrt(1.-numpy.exp(-2.*cmi))
 
+verbosity = 0
 
-# Test data:
-# VAR process with given parents and neighbors and all coefficients equal
-##
-coeff = 0.5
-T = 10000
-numpy.random.seed(42)
-# True graph
-links_coeffs = {0: [((0, -1), coeff), ((2, -1), -coeff), ((1, 0), coeff)],
-                1: [((1, -1), coeff), ((0, -1), -coeff),
-                    ((0, 0), coeff), ((2, 0), coeff)],
-                2: [((2, -1), coeff), ((1, -1), -coeff),
-                    ((0, -2), -coeff), ((1, 0), coeff)],
-                3: [((3, -1), 1.*coeff), ((2, -1), -.9*coeff),
-                    ((2, -4), -.8*coeff), ((1, -2), -.7*coeff)],
-                }
-
-fulldata, true_parents_neighbors = pp.var_process(links_coeffs, T=T)
-T, N = fulldata.shape
-
-# fulldata_mask = numpy.ones(fulldata.shape, dtype='bool')
-# fulldata_mask[:, :] = numpy.random.randint(0, 2, size=(T, N)).astype('bool')
-# print fulldata_mask
-# print graph
-print("\n" + "-" * 60)
-print("Testing tigramite estimation with graph")
-for j in range(N):
-    print("\n\tVariable %d: %s" % (j, true_parents_neighbors[j]))
-print("\nand all coefficients = %.2f" % coeff)
-print("\n" + "-" * 60)
-
-
-verbosity = 1
 
 #
 #  Start
 #
 
-
 def test_pc_algo_all():
+    print("\nTesting function 'pc_algo_all' to check whether PC algorithm "
+          "returns the correct set of parents.")
+
+    # Test data:
+    T = 1000
+    numpy.random.seed(42)
+    # Graph as in Runge PRE 2012 Fig. 1
+    cxz = .5
+    ax = .5
+    cxy = .5
+    cwy = .5
+    links_coeffs = {0: [((1, -1), cxz)],
+                    1: [((1, -1), ax)],
+                    2: [((1, -2), cxy), ((3, -1), cwy)],
+                    3: [],
+                    }
+
+    fulldata, true_parents_neighbors = pp.var_process(links_coeffs, T=T)
+    T, N = fulldata.shape
 
     max_trials = 5
     measure_params = {'knn': 100}
     significance = 'analytic'
 
-    print("\nChecking different initial_conds =")
+    print("Checking different initial_conds...")
     for initial_conds in range(1, 4):
-        print("%d" % initial_conds)
+        # print("%d" % initial_conds)
 
         parents_neighbors = te.pc_algo_all(
             fulldata, estimate_parents_neighbors='both',
             tau_min=0, tau_max=4,
             initial_conds=initial_conds, max_conds=6, max_trials=max_trials,
             measure='par_corr',
-            significance=significance, sig_lev=0.995, sig_samples=100,
+            significance=significance, sig_lev=0.999995, sig_samples=100,
             fixed_thres=0.015,
             measure_params=measure_params,
             mask=False, mask_type=['y'], data_mask=numpy.array([0]),
@@ -134,7 +118,7 @@ def test_pc_algo_all():
             verbosity=verbosity)
         assert_graphs_equal(parents_neighbors, true_parents_neighbors)
 
-    print("\nChecking initial_parents_neighbors...")
+    print("Checking initial_parents_neighbors...")
     parents_neighbors = te.pc_algo_all(
         fulldata, estimate_parents_neighbors='both',
         tau_min=0, tau_max=4,
@@ -148,9 +132,9 @@ def test_pc_algo_all():
         verbosity=verbosity)
     assert_graphs_equal(parents_neighbors, true_parents_neighbors)
 
-    print("\nChecking estimate_parents_neighbors =")
+    print("Checking estimate_parents_neighbors...")
     for estimate_parents_neighbors in ['parents', 'both']:
-        print("%s" % estimate_parents_neighbors)
+        # print("%s" % estimate_parents_neighbors)
         parents_neighbors = te.pc_algo_all(
             fulldata,
             estimate_parents_neighbors=estimate_parents_neighbors,
@@ -171,6 +155,8 @@ def test_pc_algo_all():
 
 
 def test_construct_array():
+    print("\nTesting function '_construct_array' to check whether array is "
+          "correctly constructed from data.")
 
     data = numpy.array([[0, 10, 20, 30],
                         [1, 11, 21, 31],
@@ -244,6 +230,9 @@ def test_construct_array():
 
 def test_get_lagfunctions():
 
+    print("\nTesting function 'get_lagfunctions' to check whether conditioning"
+          " measures MI, ITY, ITX, and MIT work as expected.")
+
     significance = 'analytic'
 
     # Graph as in Runge PRE 2012 Fig. 1
@@ -257,7 +246,7 @@ def test_get_lagfunctions():
                     3: [],
                     }
     numpy.random.seed(42)
-    data, links = pp.var_process(links_coeffs, T=5000, verbosity=verbosity)
+    data, links = pp.var_process(links_coeffs, T=10000, verbosity=verbosity)
     T, N = data.shape
 
     i = 1
@@ -273,9 +262,8 @@ def test_get_lagfunctions():
                               cond_mode=cond_mode,
                               measure='par_corr',
                               tau_max=2, verbosity=verbosity)
-    numpy.testing.assert_almost_equal(res[0][i, j, tau],
-                                      numpy.array([expected_parcorr]),
-                                      decimal=2)
+    numpy.testing.assert_allclose(res[0][i, j, tau], expected_parcorr, 
+                                  rtol=0.1)
 
     # Test that ITY is correct
     cond_mode = 'parents_y'
@@ -285,9 +273,8 @@ def test_get_lagfunctions():
                               cond_mode=cond_mode,
                               measure='par_corr',
                               tau_max=2, verbosity=verbosity)
-    numpy.testing.assert_almost_equal(res[0][i, j, tau],
-                                      numpy.array([expected_parcorr]),
-                                      decimal=2)
+    numpy.testing.assert_allclose(res[0][i, j, tau], expected_parcorr, 
+                                  rtol=0.1)
 
     # Test that ITX is correct
     cond_mode = 'parents_x'
@@ -298,9 +285,8 @@ def test_get_lagfunctions():
                               cond_mode=cond_mode,
                               measure='par_corr',
                               tau_max=2, verbosity=verbosity)
-    numpy.testing.assert_almost_equal(res[0][i, j, tau],
-                                      numpy.array([expected_parcorr]),
-                                      decimal=2)
+    numpy.testing.assert_allclose(res[0][i, j, tau], expected_parcorr, 
+                                  rtol=0.1)
 
     # Test that MIT is correct
     cond_mode = 'parents_xy'
@@ -310,17 +296,15 @@ def test_get_lagfunctions():
                               cond_mode=cond_mode,
                               measure='par_corr',
                               tau_max=2, verbosity=verbosity)
-    numpy.testing.assert_almost_equal(res[0][i, j, tau],
-                                      numpy.array([expected_parcorr]),
-                                      decimal=2)
+    numpy.testing.assert_allclose(res[0][i, j, tau], expected_parcorr, 
+                                  rtol=0.1)
     # All non-links should be almost zero
     for nj in range(N):
         for ni in range(N):
             for ntau in range(3):
                 if (ni, -ntau) not in links[nj]:
-                    numpy.testing.assert_almost_equal(res[0][ni, nj, ntau],
-                                                      numpy.array([0.]),
-                                                      decimal=1)
+                    numpy.testing.assert_allclose(res[0][ni, nj, ntau], 0., 
+                                                  atol=0.05)
 
     # Now testing a contemporaneous MIT
     # Graph below
@@ -349,15 +333,16 @@ def test_get_lagfunctions():
                               cond_mode=cond_mode,
                               measure='par_corr',
                               tau_max=2, verbosity=verbosity)
-    numpy.testing.assert_almost_equal(res[0][i, j, tau],
-                                      numpy.array([expected_parcorr]),
-                                      decimal=2)
+    numpy.testing.assert_allclose(res[0][i, j, tau], expected_parcorr, 
+                                  rtol=0.1)
 
 
 def test_measures():
 
+    print("\nTesting function '_calculate_lag_function' to check dependence "
+          "measures are correctly estimated.")
+
     measure_params = {'knn': 10, }
-    decimal = 2
     ax = 0.6
     ay = 0.3
     cxy = .7
@@ -369,13 +354,13 @@ def test_measures():
                                  use='inno_cov', verbosity=verbosity)
     T, N = data.shape
 
-    print("Checking precision up to %d decimals" % decimal)
     expected_cmi = 0.5*numpy.log(1. + (cxy**2 * 1.**2) / (1.**2))
     expected_parcorr = cmi2parcorr_trafo(expected_cmi)
     gamma_x = 1.**2 / (1. - ax**2)
     gamma_xy = (ax*cxy*gamma_x) / (1. - ax*ay)
     gamma_y = (cxy**2*gamma_x + 1.**2 + 2.*ay*cxy*gamma_xy) / (1. - ay**2)
     expected_reg = cxy * numpy.sqrt(gamma_x / gamma_y)
+
     for measure in ['par_corr', 'reg', 'cmi_knn', 'cmi_gauss']:
         res = te._calculate_lag_function(
                 measure=measure,
@@ -397,13 +382,10 @@ def test_measures():
         elif (measure == 'cmi_knn' or measure == 'cmi_gauss'):
             print("%s = %.3f (expected = %.3f)"
                   % (measure, res[1], expected_cmi))
-            numpy.testing.assert_almost_equal(res[1],
-                                              numpy.array([expected_cmi]),
-                                              decimal=decimal)
             numpy.testing.assert_allclose(res[1], expected_cmi, rtol=0.1)
 
     # binning estimator
-    symb_data = pp.quantile_bin_array(data, bins=6)
+    symb_data = pp.quantile_bin_array(data, bins=5)
     res = te._calculate_lag_function(
         measure='cmi_symb',
         data=symb_data,
@@ -413,16 +395,15 @@ def test_measures():
         tau_max=1,
         selected_lags=[1],
         verbosity=verbosity)['cmi']
-    print("%s = %.3f (expected = %.3f, here only 1 decimal checked)"
+    print("%s = %.3f (expected = %.3f)"
           % ('symb', res[1], expected_cmi))
-    numpy.testing.assert_almost_equal(res[1],
-                                      numpy.array([expected_cmi]),
-                                      decimal=1)
+    numpy.testing.assert_allclose(res[1], expected_cmi, rtol=0.3)
+
     # ordinal pattern estimator
     symb_data = pp.ordinal_patt_array(data,
                                       array_mask=numpy.ones(data.shape,
                                                             dtype='int32'),
-                                      dim=3, step=10)[0]
+                                      dim=3, step=2)[0]
     res = te._calculate_lag_function(
         measure='cmi_symb',
         data=symb_data,
@@ -432,11 +413,9 @@ def test_measures():
         tau_max=1,
         selected_lags=[1],
         verbosity=verbosity)['cmi']
-    print("%s = %.3f (expected = %.3f, here only 1 decimal checked)"
+    print("%s = %.3f (expected = %.3f)"
           % ('ordinal-symb', res[1], expected_cmi))
-    numpy.testing.assert_almost_equal(res[1],
-                                      numpy.array([expected_cmi]),
-                                      decimal=1)
+    numpy.testing.assert_allclose(res[1], expected_cmi, rtol=0.4)
 
 
 class test__get_significance_estimate():
@@ -459,7 +438,7 @@ class test__get_significance_estimate():
         self.measure_params = {'knn': 10, }
 
     def test_alphas(self):
-        print("\nChecking whether sig_lev %.2f results in " % self.sig_lev +
+        print("Checking whether sig_lev %.2f results in " % self.sig_lev +
               "%.2f false positives" % (1. - self.sig_lev))
 
         for significance in ['analytic']:      #, 'full_shuffle']:
@@ -471,7 +450,7 @@ class test__get_significance_estimate():
                                               rtol=self.rtol)
 
     def test_shuffle_vs_alpha(self):
-        print("\nChecking that shuffle sig_thres equals analytical thres "
+        print("Checking that shuffle sig_thres equals analytical thres "
               "for sig_lev = %.2f, sig_samples = %d" % (self.sig_lev,
                                                         self.sig_samples))
         numpy.random.seed(42)
@@ -533,7 +512,6 @@ class test__get_confidence_estimate():
         self.conf_lev = .9
         self.conf_samples = 1000
         self.T = 500
-        self.decimal = 2
         self.links_coeffs = {0: [],
                              1: [],
                              }
@@ -555,7 +533,7 @@ class test__get_confidence_estimate():
                                                    data=data, mask=False)
 
     def test_shuffle_vs_alpha(self):
-        print("\nChecking that bootstrap conf intervals equal analytical ones "
+        print("Checking that bootstrap conf intervals equal analytical ones "
               "for conf_lev = %.2f, conf_samples = %d" % (self.conf_lev,
                                                           self.conf_samples))
         for measure in ['reg', 'par_corr', 'cmi_gauss']:
@@ -597,7 +575,7 @@ if __name__ == "__main__":
     sig.test_alphas()
     conf = test__get_confidence_estimate()
     conf.test_shuffle_vs_alpha()
-    print("All passed!")
+    print("\nAll passed!")
 
     # Nose...
     # result = nose.run()
