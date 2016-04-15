@@ -7,7 +7,7 @@ Version 2.0 beta (release date 2016-04-15)
 
 ## General Notes
 
-Tigramite is a time series analysis python module. With flexibly adaptable scripts it allows to reconstruct graphical models (conditional independence graphs) from discrete or continuously-valued time series based on the PC algorithm, quantify interaction strengths with different measures, and create high-quality plots of the results.
+Tigramite is a time series analysis python module. With flexibly adaptable scripts it allows to reconstruct graphical models (conditional independence graphs) from discrete or continuously-valued time series based on a causal discovery algorithm, quantify interaction strengths with different measures, and create high-quality plots of the results.
 
 
 ## Features
