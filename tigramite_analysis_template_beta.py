@@ -1,20 +1,33 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 #
-# TiGraMITe -- Time Series Graph and Momentary Information Transfer estimation
+# TiGraMITe -- Time Series Graph Based Measures of Information Transfer
 #
 # Methods are described in:
+#    J. Runge et al., Nature Communications, 6, 8502 (2015)
 #    J. Runge, J. Heitzig, V. Petoukhov, and J. Kurths,
-#        Phys. Rev. Lett. 108, 258701 (2012)
+#       Phys. Rev. Lett. 108, 258701 (2012)
 #    J. Runge, J. Heitzig, N. Marwan, and J. Kurths,
-#        Phys. Rev. E 86, 061121 (2012)
-#       AND http://arxiv.org/abs/1210.2748
+#       Phys. Rev. E 86, 061121 (2012)
 #    J. Runge, V. Petoukhov, and J. Kurths, Journal of Climate, 27.2 (2014)
 #
 # Please cite all references when using the method.
 #
-# Copyright (C) 2012-2015 Jakob Runge <jakobrunge@posteo.de>
-# URL: <http://tocsy.pik-potsdam.de/tigramite.php>
+# Copyright (C) 2012-2016 Jakob Runge <jakobrunge@posteo.de>
+# https://github.com/jakobrunge/tigramite.git
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
 Script to estimate time series graph and measures like MIT, ITY...
