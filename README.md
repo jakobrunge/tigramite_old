@@ -1,22 +1,22 @@
 # TIGRAMITE – TIME SERIES GRAPH BASED MEASURES OF INFORMATION TRANSFER
 
-Version 2.0 beta (release date 2016-04-12)
+Version 2.0 beta (release date 2016-04-15)
 
 (Python Package)
 
 
 ## General Notes
 
-Tigramite is a time series analysis python module. With flexibly adaptable scripts it allows to reconstruct graphical models from time series based on the PC algorithm, quantify interaction strengths with different measures, and create high-quality plots of the results.
+Tigramite is a time series analysis python module. With flexibly adaptable scripts it allows to reconstruct graphical models (conditional independence graphs) from discrete or continuously-valued time series based on the PC algorithm, quantify interaction strengths with different measures, and create high-quality plots of the results.
 
 
 ## Features
 
-- Analysis can be performed on multivariate time series. Further scripts allow sliding windows or ensemble analyses
+- Analysis can be performed on multivariate time series. Further scripts allow sliding window or ensemble analyses
 
-- Flexible Python framework for custom preprocessing like anomalization, high/lowpass filters, masking of samples (e.g. winter months only), time-binning, ordinal pattern analysis, and more
+- Functions for custom preprocessing like anomalization, high/lowpass filters, masking of samples (e.g. winter months only), time-binning, ordinal pattern analysis, and more
 
-- Different (conditional) measures of association (partial correlation, regression, and conditional mutual information with different estimators)
+- Different (conditional) measures of association (partial correlation, standardized regression, and conditional mutual information with different estimators)
 
 - Fast computation through use of C-code via scipy.weave; also fully parallelized script (mpi4py package necessary) available
 
@@ -61,6 +61,8 @@ You commit to cite TiGraMITe in your reports or publications if used.
 
 Copyright (C) 2012-2016 Jakob Runge
 
-Parallelizer module "mpi.py" Copyright (C) Jobst Heitzig
+mpi4py wrapper module "mpi.py" Copyright (C) 2012 Jobst Heitzig
+
+See license.txt for full text.
 
 TiGraMITe is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 3 of the License, or (at your option) any later version. TiGraMITe is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
