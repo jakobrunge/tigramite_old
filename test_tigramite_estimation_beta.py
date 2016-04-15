@@ -32,7 +32,6 @@
 import numpy
 import tigramite_estimation_beta as te
 import tigramite_preprocessing as pp
-import tigramite_plotting
 
 import nose
 import nose.tools as nt
@@ -67,7 +66,7 @@ def _get_neighbor_graph(nodes, exclude=None):
 
 
 def cmi2parcorr_trafo(cmi):
-    return numpy.sqrt(1.-numpy.exp(-2.*cmi))
+    return numpy.sqrt(1. - numpy.exp(-2. * cmi))
 
 verbosity = 0
 
@@ -233,8 +232,6 @@ def test_get_lagfunctions():
     print("\nTesting function 'get_lagfunctions' to check whether conditioning"
           " measures MI, ITY, ITX, and MIT work as expected.")
 
-    significance = 'analytic'
-
     # Graph as in Runge PRE 2012 Fig. 1
     cxz = .5
     ax = .5
@@ -255,55 +252,55 @@ def test_get_lagfunctions():
 
     # Test that cross correlation is correct
     cond_mode = 'none'
-    expected_cmi = 0.5*numpy.log(1. + (cxy**2 * 1.**2) / (1. - ax**2) /
-                                 (cwy**2 * 1.**2 + 1.**2))
+    expected_cmi = 0.5 * numpy.log(1. + (cxy**2 * 1.**2) / (1. - ax**2) /
+                                   (cwy**2 * 1.**2 + 1.**2))
     expected_parcorr = cmi2parcorr_trafo(expected_cmi)
     res = te.get_lagfunctions(data, parents_neighbors=links,
                               cond_mode=cond_mode,
                               measure='par_corr',
                               tau_max=2, verbosity=verbosity)
-    numpy.testing.assert_allclose(res[0][i, j, tau], expected_parcorr, 
+    numpy.testing.assert_allclose(res[0][i, j, tau], expected_parcorr,
                                   rtol=0.1)
 
     # Test that ITY is correct
     cond_mode = 'parents_y'
-    expected_cmi = 0.5*numpy.log(1. + (cxy**2 * 1.**2) / (1. - ax**2))
+    expected_cmi = 0.5 * numpy.log(1. + (cxy**2 * 1.**2) / (1. - ax**2))
     expected_parcorr = cmi2parcorr_trafo(expected_cmi)
     res = te.get_lagfunctions(data, parents_neighbors=links,
                               cond_mode=cond_mode,
                               measure='par_corr',
                               tau_max=2, verbosity=verbosity)
-    numpy.testing.assert_allclose(res[0][i, j, tau], expected_parcorr, 
+    numpy.testing.assert_allclose(res[0][i, j, tau], expected_parcorr,
                                   rtol=0.1)
 
     # Test that ITX is correct
     cond_mode = 'parents_x'
-    expected_cmi = 0.5*numpy.log(1. + (cxy**2 * 1.**2) /
-                                 (cwy**2 * 1.**2 + 1.**2))
+    expected_cmi = 0.5 * numpy.log(1. + (cxy**2 * 1.**2) /
+                                   (cwy**2 * 1.**2 + 1.**2))
     expected_parcorr = cmi2parcorr_trafo(expected_cmi)
     res = te.get_lagfunctions(data, parents_neighbors=links,
                               cond_mode=cond_mode,
                               measure='par_corr',
                               tau_max=2, verbosity=verbosity)
-    numpy.testing.assert_allclose(res[0][i, j, tau], expected_parcorr, 
+    numpy.testing.assert_allclose(res[0][i, j, tau], expected_parcorr,
                                   rtol=0.1)
 
     # Test that MIT is correct
     cond_mode = 'parents_xy'
-    expected_cmi = 0.5*numpy.log(1. + (cxy**2 * 1.**2) / (1.**2))
+    expected_cmi = 0.5 * numpy.log(1. + (cxy**2 * 1.**2) / (1.**2))
     expected_parcorr = cmi2parcorr_trafo(expected_cmi)
     res = te.get_lagfunctions(data, parents_neighbors=links,
                               cond_mode=cond_mode,
                               measure='par_corr',
                               tau_max=2, verbosity=verbosity)
-    numpy.testing.assert_allclose(res[0][i, j, tau], expected_parcorr, 
+    numpy.testing.assert_allclose(res[0][i, j, tau], expected_parcorr,
                                   rtol=0.1)
     # All non-links should be almost zero
     for nj in range(N):
         for ni in range(N):
             for ntau in range(3):
                 if (ni, -ntau) not in links[nj]:
-                    numpy.testing.assert_allclose(res[0][ni, nj, ntau], 0., 
+                    numpy.testing.assert_allclose(res[0][ni, nj, ntau], 0.,
                                                   atol=0.05)
 
     # Now testing a contemporaneous MIT
@@ -328,12 +325,12 @@ def test_get_lagfunctions():
     tau = 0
     cond_mode = 'parents_xy'
     expected_parcorr = - (syz * sxy - sxz * 1.**2) / numpy.sqrt(
-                        (syz**2 - 1.**2 * 1.**2) * (sxy**2 - 1.**2 * 1.**2))
+        (syz**2 - 1.**2 * 1.**2) * (sxy**2 - 1.**2 * 1.**2))
     res = te.get_lagfunctions(data, parents_neighbors=links,
                               cond_mode=cond_mode,
                               measure='par_corr',
                               tau_max=2, verbosity=verbosity)
-    numpy.testing.assert_allclose(res[0][i, j, tau], expected_parcorr, 
+    numpy.testing.assert_allclose(res[0][i, j, tau], expected_parcorr,
                                   rtol=0.1)
 
 
@@ -354,23 +351,24 @@ def test_measures():
                                  use='inno_cov', verbosity=verbosity)
     T, N = data.shape
 
-    expected_cmi = 0.5*numpy.log(1. + (cxy**2 * 1.**2) / (1.**2))
+    expected_cmi = 0.5 * numpy.log(1. + (cxy**2 * 1.**2) / (1.**2))
     expected_parcorr = cmi2parcorr_trafo(expected_cmi)
     gamma_x = 1.**2 / (1. - ax**2)
-    gamma_xy = (ax*cxy*gamma_x) / (1. - ax*ay)
-    gamma_y = (cxy**2*gamma_x + 1.**2 + 2.*ay*cxy*gamma_xy) / (1. - ay**2)
+    gamma_xy = (ax * cxy * gamma_x) / (1. - ax * ay)
+    gamma_y = (cxy**2 * gamma_x + 1.**2 + 2. *
+               ay * cxy * gamma_xy) / (1. - ay**2)
     expected_reg = cxy * numpy.sqrt(gamma_x / gamma_y)
 
     for measure in ['par_corr', 'reg', 'cmi_knn', 'cmi_gauss']:
         res = te._calculate_lag_function(
-                measure=measure,
-                data=data,
-                var_x=0, var_y=1,
-                conds_x=links[0], conds_y=links[1],
-                measure_params=measure_params,
-                tau_max=1,
-                selected_lags=[1],
-                verbosity=verbosity)['cmi']
+            measure=measure,
+            data=data,
+            var_x=0, var_y=1,
+            conds_x=links[0], conds_y=links[1],
+            measure_params=measure_params,
+            tau_max=1,
+            selected_lags=[1],
+            verbosity=verbosity)['cmi']
         if measure == 'par_corr':
             print("%s = %.3f (expected = %.3f)"
                   % (measure, res[1], expected_parcorr))
@@ -441,12 +439,12 @@ class test__get_significance_estimate():
         print("Checking whether sig_lev %.2f results in " % self.sig_lev +
               "%.2f false positives" % (1. - self.sig_lev))
 
-        for significance in ['analytic']:      #, 'full_shuffle']:
+        for significance in ['analytic']:  # , 'full_shuffle']:
             for measure in ['par_corr', 'reg']:
                 res = self.get_fpr(measure, significance=significance)
                 print("%s test for %s has FPR %.3f (expected = %.3f)" % (
-                        significance, measure, res, 1.-self.sig_lev))
-                numpy.testing.assert_allclose(res, 1.-self.sig_lev,
+                    significance, measure, res, 1. - self.sig_lev))
+                numpy.testing.assert_allclose(res, 1. - self.sig_lev,
                                               rtol=self.rtol)
 
     def test_shuffle_vs_alpha(self):
@@ -486,20 +484,20 @@ class test__get_significance_estimate():
             data = numpy.random.randn(self.T, 2)
             # .argsort(axis=0).argsort(axis=0)
             res = te._calculate_lag_function(
-                            measure=measure,
-                            data=data,
-                            var_x=0, var_y=1,
-                            conds_x=None, conds_y=None,
-                            measure_params=self.measure_params,
-                            tau_max=1,
-                            selected_lags=[1],
-                            significance=significance,
-                            sig_lev=self.sig_lev,
-                            sig_samples=self.sig_samples,
-                            verbosity=0)
+                measure=measure,
+                data=data,
+                var_x=0, var_y=1,
+                conds_x=None, conds_y=None,
+                measure_params=self.measure_params,
+                tau_max=1,
+                selected_lags=[1],
+                significance=significance,
+                sig_lev=self.sig_lev,
+                sig_samples=self.sig_samples,
+                verbosity=0)
             fpr[sam] = res['cmi_pval'][1]
 
-        return (fpr <= (1.-self.sig_lev)).mean()
+        return (fpr <= (1. - self.sig_lev)).mean()
 
 
 class test__get_confidence_estimate():
@@ -558,7 +556,7 @@ class test__get_confidence_estimate():
 
             print("bootstrap interval for %s = (%.3f, %.3f)  -- "
                   "analytic interval = (%.3f, %.3f)" % (
-                    measure, res[0], res[1], expected[0], expected[1]))
+                      measure, res[0], res[1], expected[0], expected[1]))
             numpy.testing.assert_allclose(res, expected, rtol=self.rtol)
 
 
