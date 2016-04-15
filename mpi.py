@@ -8,7 +8,7 @@ submitting function or method calls to slaves.
 Uses mpi4py if available, otherwise processes calls sequentially in one 
 process.
 
-# Copyright (C) Jobst Heitzig
+Copyright (C) 2012 Jobst Heitzig
 
 
 Examples:
