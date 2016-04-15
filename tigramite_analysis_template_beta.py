@@ -65,7 +65,7 @@ plot_time_series_graph = True
 
 save_folder = '~/test/'
 project_name = 'test'
-save_fig_format = 'pdf'
+save_fig_format = 'svg'
 verbosity = 3
 
 # Optionally start logging all print output, uncomment below as well
