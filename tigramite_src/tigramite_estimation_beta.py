@@ -73,7 +73,7 @@ def _sanity_checks(which='pc_algo',
         which (str, optional): Either 'pc_algo' or 'lagfuncs' which implies
             some different sanity checks.
         data (array, optional): Data array of shape (time, variables).
-        estimate_parents_neighbors (str, optional): Whether to estimate 
+        estimate_parents_neighbors (str, optional): Whether to estimate
             'parents', 'neighbors', or 'both'.
         tau_min (int, optional): Minimum time delay.
         tau_max (int, optional): Maximum time delay.
@@ -86,7 +86,8 @@ def _sanity_checks(which='pc_algo',
         measure_params (dict, optional): Parameters for dependence
             measures.
         significance (bool or str, optional): Type of significance test,
-            either False or 'analytic', 'full_shuffle', 'fixed'.
+            either False or 'analytic', 'full_shuffle', 'block_shuffle',
+            'fixed'.
         sig_lev (float, optional): Significance level (eg, 0.95).
         sig_samples (int, optional): Number of samples for shuffle significance
             test.
@@ -133,15 +134,18 @@ def _sanity_checks(which='pc_algo',
     if numpy.isnan(data).sum() != 0:
         raise ValueError("NaNs in the data")
 
-    if significance not in ['analytic', 'full_shuffle', 'fixed']:
+    if significance not in ['analytic', 'full_shuffle',
+                            'block_shuffle', 'fixed']:
         raise ValueError("significance must be one of "
-                         "'analytic', 'full_shuffle', 'fixed'")
+                         "'analytic', 'full_shuffle', 'block_shuffle',"
+                         " 'fixed'")
     if significance == 'analytic' and (sig_lev < .5 or sig_lev >= 1.):
         raise ValueError("sig_lev = %.2f, " % sig_lev +
                          "but must be between 0.5 and 1")
-    if significance == 'full_shuffle' and sig_samples*sig_lev < 1.:
+    if ((significance == 'full_shuffle' or significance == 'block_shuffle') and
+            sig_samples * sig_lev < 1.):
         raise ValueError("sig_samples*(1.-sig_lev) is %.2f"
-                         % (sig_samples*sig_lev) + ", must be >> 1")
+                         % (sig_samples * sig_lev) + ", must be >> 1")
     if significance == 'fixed' and fixed_thres <= 0.:
         raise ValueError("fixed_thres = %.2f, must be > 0" % fixed_thres)
 
@@ -165,7 +169,7 @@ def _sanity_checks(which='pc_algo',
         raise ValueError("measure must be one of "
                          "'par_corr', 'reg', 'cmi_knn', "
                          "'cmi_symb', 'cmi_gauss'")
-    if ((measure == 'cmi_knn') and (measure_params['knn'] > T/2. or
+    if ((measure == 'cmi_knn') and (measure_params['knn'] > T / 2. or
                                     measure_params['knn'] < 1)):
         raise ValueError("knn = %s , " % str(measure_params['knn']) +
                          "should be between 1 and T/2")
@@ -199,7 +203,7 @@ def _sanity_checks(which='pc_algo',
         if max_trials <= 0:
             raise ValueError("max_trials must be > 0")
         if (initial_parents_neighbors is not None and _check_parents_neighbors(
-                    initial_parents_neighbors, N) is False):
+                initial_parents_neighbors, N) is False):
             raise ValueError("initial_parents_neighbors must provide "
                              "parents/neighbors for all variables j in format:"
                              " {..., j:[(var1, lag1), (var2, lag2), ...], "
@@ -227,12 +231,12 @@ def _sanity_checks(which='pc_algo',
                 raise ValueError("conf_lev = %.2f, " % conf_lev +
                                  "but must be between 0.5 and 1")
             if (confidence == 'bootstrap' and
-                    conf_samples*(1. - conf_lev) / 2. < 1.):
+                    conf_samples * (1. - conf_lev) / 2. < 1.):
                 raise ValueError("conf_samples*(1.-conf_lev)/2 is %.2f"
-                                 % (conf_samples*(1.-conf_lev)/2.) +
+                                 % (conf_samples * (1. - conf_lev) / 2.) +
                                  ", must be >> 1")
         if (parents_neighbors is not None and _check_parents_neighbors(
-                    parents_neighbors, N) is False):
+                parents_neighbors, N) is False):
             raise ValueError("parents_neighbors must provide parents/neighbors"
                              " for all variables j in format: {..., "
                              "j:[(var1, lag1), (var2, lag2), ...], ...}, "
@@ -242,7 +246,7 @@ def _sanity_checks(which='pc_algo',
                              "'none', 'parents_x', 'parents_y', 'parents_xy'")
         if selected_variables is not None:
             if (numpy.any(numpy.array(selected_variables) < 0) or
-               numpy.any(numpy.array(selected_variables) >= N)):
+                    numpy.any(numpy.array(selected_variables) >= N)):
                 raise ValueError("selected_variables must be within 0..N-1")
 
 
@@ -272,7 +276,8 @@ def pc_algo_all(data, estimate_parents_neighbors='both',
         measure_params (dictionary, optional): Parameters for dependence
             measures.
         significance (bool or str, optional): Type of significance test,
-            either False or 'analytic', 'full_shuffle', 'fixed'.
+            either False or 'analytic', 'full_shuffle',
+            'block_shuffle', 'fixed'.
         sig_lev (float, optional): Significance level (eg, 0.95).
         sig_samples (int, optional): Number of samples for shuffle significance
             test.
@@ -311,9 +316,9 @@ def pc_algo_all(data, estimate_parents_neighbors='both',
                    verbosity=verbosity)
 
     if verbosity > 0:
-        print("\n" + "-"*60 +
+        print("\n" + "-" * 60 +
               "\nEstimating parents for all variables:"
-              "\n" + "-"*60)
+              "\n" + "-" * 60)
 
     parents_neighbors = dict([(i, []) for i in range(N)])
 
@@ -340,9 +345,9 @@ def pc_algo_all(data, estimate_parents_neighbors='both',
     if (estimate_parents_neighbors == 'neighbors' or
             estimate_parents_neighbors == 'both'):
         if verbosity > 0:
-            print("\n" + "-"*60 +
+            print("\n" + "-" * 60 +
                   "\nEstimating neighbors for all variables:"
-                  "\n" + "-"*60)
+                  "\n" + "-" * 60)
         for j in range(N):
             res = _pc_algo(data, j,
                            parents_or_neighbors='neighbors',
@@ -360,14 +365,14 @@ def pc_algo_all(data, estimate_parents_neighbors='both',
             parents_neighbors[j] += res
 
     if verbosity > 0:
-        print("\n" + "-"*60)
+        print("\n" + "-" * 60)
         if estimate_parents_neighbors == 'both':
             print("\nResulting sorted parents and neighbors:")
         else:
             print("\nResulting sorted %s:" % estimate_parents_neighbors)
         for j in range(N):
             print("\n    Variable %d: %s" % (j, parents_neighbors[j]))
-        print("\n" + "-"*60)
+        print("\n" + "-" * 60)
 
     return parents_neighbors
 
@@ -412,6 +417,7 @@ class Conditions():
         parents (list): Parents in format [(var1, lag1), (var2, lag2), ...]
             with lags <= 0.
     """
+
     def __init__(self, parents):
         """Assign variables.
 
@@ -512,7 +518,8 @@ def _pc_algo(data, j,
         measure_params (dict, optional): Parameters for dependence
             measures.
         significance (bool or str, optional): Type of significance test,
-            either False or 'analytic', 'full_shuffle', 'fixed'.
+            either False or 'analytic', 'full_shuffle', 'block_shuffle',
+            'fixed'.
         sig_lev (float, optional): Significance level (eg, 0.95).
         sig_samples (int, optional): Number of samples for shuffle significance
             test.
@@ -553,7 +560,7 @@ def _pc_algo(data, j,
         tau_min = max(1, tau_min)
         if tau_max < tau_min:
             raise ValueError("tau_max = %d, tau_min = %d," % (tau_max,
-                             tau_min) +
+                                                              tau_min) +
                              " but tau_max >= tau_min > 0 to estimate "
                              "parents")
     else:
@@ -566,9 +573,9 @@ def _pc_algo(data, j,
                                     for lag in range(tau_min, tau_max + 1)])
     else:
         nodes_and_estimates = dict(
-                    [((var, lag), numpy.infty)
-                        for (var, lag) in initial_parents_neighbors[j]
-                        if -lag in range(tau_min, tau_max + 1)])
+            [((var, lag), numpy.infty)
+             for (var, lag) in initial_parents_neighbors[j]
+             if -lag in range(tau_min, tau_max + 1)])
 
     if parents_or_neighbors == 'neighbors':
         if (j, 0) in nodes_and_estimates.keys():
@@ -586,9 +593,9 @@ def _pc_algo(data, j,
     conditions = Conditions(sorted_nodes)
 
     if verbosity > 1:
-        print("\n    " + "-"*60 +
+        print("\n    " + "-" * 60 +
               "\n    Estimating %s for var %d :" % (parents_or_neighbors,
-                                                    j) + "\n    " + "-"*60)
+                                                    j) + "\n    " + "-" * 60)
         if initial_parents_neighbors is not None:
             print("    ckecking only %s" % str(nodes_and_estimates.keys()))
 
@@ -704,13 +711,14 @@ def _pc_algo(data, j,
             if verbosity > 1:
                 print("\n    Check whether also condition sets smaller than "
                       "remaining parents have been used...")
-            convergence = conditions.check_convergence(dim=len(sorted_nodes)-1)
+            convergence = conditions.check_convergence(
+                dim=len(sorted_nodes) - 1)
             if convergence:
                 break
             else:
                 if verbosity > 1:
                     print("\n    Yes --> returning to dim = len(nodes)-1")
-                conds_dim = len(sorted_nodes)-1
+                conds_dim = len(sorted_nodes) - 1
 
     if verbosity > 1:
         print("\n    Algorithm converged.")
@@ -853,7 +861,8 @@ def get_lagfunctions(data, selected_variables=None, parents_neighbors=None,
         measure_params (dict, optional): Parameters for dependence
             measures.
         significance (bool or str, optional): Type of significance test,
-            either False or 'analytic', 'full_shuffle', 'fixed'.
+            either False or 'analytic', 'full_shuffle', 'block_shuffle',
+            'fixed'.
         sig_lev (float, optional): Significance level (eg, 0.95).
         sig_samples (int, optional): Number of samples for shuffle significance
             test.
@@ -1007,7 +1016,8 @@ def _calculate_lag_function(measure, data, data_mask=None,
         selected_lags (bool or list, optional): Whether to compute measure only
             at selected lags.
         significance (bool or str, optional): Type of significance test,
-                    either False or 'analytic', 'full_shuffle', 'fixed'.
+            either False or 'analytic', 'full_shuffle', 'block_shuffle',
+            'fixed'.
         sig_lev (float, optional): Significance level (eg, 0.95).
         sig_samples (int, optional): Number of samples for shuffle significance
             test.
@@ -1053,13 +1063,13 @@ def _calculate_lag_function(measure, data, data_mask=None,
         Z = conds_y + [(node[0], -tau + node[1]) for node in conds_x]
 
         array, xyz = _construct_array(
-                        X=X, Y=Y, Z=Z,
-                        tau_max=tau_max,
-                        data=data,
-                        mask=mask,
-                        data_mask=data_mask,
-                        mask_type=mask_type,
-                        verbosity=verbosity)
+            X=X, Y=Y, Z=Z,
+            tau_max=tau_max,
+            data=data,
+            mask=mask,
+            data_mask=data_mask,
+            mask_type=mask_type,
+            verbosity=verbosity)
 
         dim, T_eff = array.shape
         if T_eff < min_samples:
@@ -1179,7 +1189,7 @@ def _construct_array(X, Y, Z, tau_max, data, mask=False,
     if (numpy.any(numpy.array(XYZ)[:, 0] >= N) or
             numpy.any(numpy.array(XYZ)[:, 0] < 0)):
         raise ValueError("variable indices %s," % str(numpy.array(XYZ)[:, 0]) +
-                         " but must be in [0, %d]" % (N-1))
+                         " but must be in [0, %d]" % (N - 1))
     if numpy.all(numpy.array(Y)[:, 1] < 0):
         raise ValueError("Y-nodes are %s, " % str(Y) +
                          "but one of the Y-nodes must have zero lag")
@@ -1249,7 +1259,8 @@ def _get_estimate(array, measure, xyz, measure_params,
         measure_params (dict, optional): Parameters for dependence
             measures.
         significance (bool or str, optional): Type of significance test,
-            either False or 'analytic', 'full_shuffle', 'fixed'.
+            either False or 'analytic', 'full_shuffle', 'block_shuffle',
+            'fixed'.
         sig_lev (float, optional): Significance level (eg, 0.95).
         sig_samples (int, optional): Number of samples for shuffle significance
             test.
@@ -1283,13 +1294,14 @@ def _get_estimate(array, measure, xyz, measure_params,
             sig_lev, df) / numpy.sqrt(df + stats.t.ppf(sig_lev, df) ** 2)
 
         # Confidence level
-        value_tdist = val*numpy.sqrt(T-dim) / numpy.sqrt(1.-val**2)
-        conf_lower = (stats.t.ppf(q=1.-c_int, df=T-dim, loc=value_tdist) /
-                      numpy.sqrt(T-dim + stats.t.ppf(q=1.-c_int, df=T-dim,
-                                                     loc=value_tdist)**2))
-        conf_upper = (stats.t.ppf(q=c_int, df=T-dim, loc=value_tdist) /
-                      numpy.sqrt(T-dim + stats.t.ppf(q=c_int, df=T-dim,
-                                                     loc=value_tdist)**2))
+        value_tdist = val * numpy.sqrt(T - dim) / numpy.sqrt(1. - val**2)
+        conf_lower = (stats.t.ppf(q=1. - c_int, df=T - dim, loc=value_tdist) /
+                      numpy.sqrt(T - dim + stats.t.ppf(q=1. - c_int,
+                                                       df=T - dim,
+                                                       loc=value_tdist)**2))
+        conf_upper = (stats.t.ppf(q=c_int, df=T - dim, loc=value_tdist) /
+                      numpy.sqrt(T - dim + stats.t.ppf(q=c_int, df=T - dim,
+                                                       loc=value_tdist)**2))
 
     elif measure == 'reg':
         # Partial regression and 2-sided p-value
@@ -1303,14 +1315,14 @@ def _get_estimate(array, measure, xyz, measure_params,
         sig_thres = stats.t.ppf(sig_lev, df=df) * coeff_error
 
         # Confidence level
-        conf_lower = (stats.t.ppf(q=1.-c_int, df=df,
-                                  loc=val/coeff_error) * coeff_error)
+        conf_lower = (stats.t.ppf(q=1. - c_int, df=df,
+                                  loc=val / coeff_error) * coeff_error)
         conf_upper = (stats.t.ppf(q=c_int, df=df,
-                                  loc=val/coeff_error) * coeff_error)
+                                  loc=val / coeff_error) * coeff_error)
 
     elif measure == 'cmi_gauss':
         tmpval, pval = _estimate_partial_correlation(
-                                array=numpy.copy(array))
+            array=numpy.copy(array))
         val = _par_corr_to_cmi(tmpval)
 
         # Significance threshold
@@ -1319,12 +1331,12 @@ def _get_estimate(array, measure, xyz, measure_params,
         sig_thres = _par_corr_to_cmi((tmp) / numpy.sqrt(df + tmp ** 2))
 
         # Confidence level
-        value_tdist = (numpy.abs(tmpval)*numpy.sqrt(T-dim) /
-                       numpy.sqrt(1.-tmpval**2))
-        tmp = stats.t.ppf(q=1.-c_int, df=df, loc=value_tdist)
-        conf_lower = _par_corr_to_cmi((tmp / numpy.sqrt(T-dim + tmp**2)))
+        value_tdist = (numpy.abs(tmpval) * numpy.sqrt(T - dim) /
+                       numpy.sqrt(1. - tmpval**2))
+        tmp = stats.t.ppf(q=1. - c_int, df=df, loc=value_tdist)
+        conf_lower = _par_corr_to_cmi((tmp / numpy.sqrt(T - dim + tmp**2)))
         tmp = stats.t.ppf(q=c_int, df=df, loc=value_tdist)
-        conf_upper = _par_corr_to_cmi((tmp / numpy.sqrt(T-dim + tmp**2)))
+        conf_upper = _par_corr_to_cmi((tmp / numpy.sqrt(T - dim + tmp**2)))
 
     #  For the non-parametric approaches the significance statistics
     #  are optionally computed below
@@ -1371,7 +1383,7 @@ def _get_estimate(array, measure, xyz, measure_params,
                                           verbosity=verbosity)
 
             pval = (null_dist >= val).mean()
-            sig_thres = null_dist[sig_lev*sig_samples]
+            sig_thres = null_dist[sig_lev * sig_samples]
 
         elif significance == 'fixed':
             sig_thres = fixed_thres
@@ -1383,8 +1395,8 @@ def _get_estimate(array, measure, xyz, measure_params,
 
         if measure == 'cmi_knn':
             conf_knn_class = ConfidenceCMIknn(
-                                array=numpy.copy(array),
-                                k=measure_params['knn'], xyz=xyz)
+                array=numpy.copy(array),
+                k=measure_params['knn'], xyz=xyz)
 
         bootdist = numpy.zeros(conf_samples)
         for sam in range(conf_samples):
@@ -1424,7 +1436,8 @@ def _get_shuffle_dist(array, xyz, significance, measure,
         array (array, optional): Data array of shape (dim, T).
         xyz (array): XYZ identifier array of shape (dim,).
         significance (bool or str, optional): Type of significance test,
-            either False or 'analytic', 'full_shuffle', 'fixed'.
+            either False or 'analytic', 'full_shuffle', 'block_shuffle',
+            'fixed'.
         measure (str, optional): Measure of dependence, currently 'par_corr',
             'reg', 'cmi_knn', 'cmi_symb', 'cmi_gauss' are supported.
         measure_params (dict, optional): Parameters for dependence
@@ -1470,8 +1483,81 @@ def _get_shuffle_dist(array, xyz, significance, measure,
 
         return null_dist
 
+    elif significance == 'block_shuffle':
+
+        from scipy import signal, optimize
+
+        if verbosity > 2:
+            print("            Block shuffle significance test: jointly "
+                  "shuffling indices %s of array" % str(x_indices))
+
+        # Determine block length using approach in Mader (2013) [Eq. (6)]
+        # which improves method of Pfeifer (2005) with non-overlapping blocks
+        # In case of multidimensional X the max is used
+
+        # Maximum lag for autocov estimation
+        max_lag = T / 10
+
+        def func(x, a, decay):
+            return a * decay**x
+
+        block_len = 1
+        for i in x_indices:
+
+            # Get decay rate of envelope of autocorrelation functions
+            # via hilbert trafo
+            autocov = _calculate_lag_function(measure='par_corr',
+                                              data=array[i].reshape(T, 1),
+                                              var_x=0, var_y=0,
+                                              tau_max=max_lag)['cmi']
+            autocov[0] = 1.
+            hilbert = numpy.abs(signal.hilbert(autocov))
+
+            popt, pcov = optimize.curve_fit(
+                func, range(0, max_lag + 1), hilbert)
+            phi = popt[1]
+
+            # Formula of Pfeifer (2005) assuming non-overlapping blocks
+            l_opt = (4. * T * (phi / (1. - phi) + phi**2 / (1. - phi)**2)**2 /
+                     (1. + 2. * phi / (1. - phi))**2)**(1. / 3.)
+
+            block_len = max(block_len, int(l_opt))
+
+        if verbosity > 2:
+            print("            Optimal block length %d" % block_len)
+
+        null_dist = numpy.zeros(sig_samples)
+        for sam in range(sig_samples):
+
+            # Block starting indices are drawn without replacement (shuffled)
+            # from indices between T % block_len up to T - block_len
+            start = numpy.random.randint(0, T % block_len + 1)
+            blocks = numpy.arange(T)[start: T - block_len + 1: block_len]
+
+            perm = numpy.array([numpy.arange(T)[b:b + block_len]
+                                for b in numpy.random.permutation(blocks)]
+                               ).flatten()
+
+            array_shuffled = numpy.copy(
+                array[:, start:T - ((T % block_len) - start)])
+
+            for i in x_indices:
+                array_shuffled[i] = array[i, perm]
+
+            null_dist[sam] = _get_estimate(array=array_shuffled,
+                                           measure=measure, xyz=xyz,
+                                           measure_params=measure_params
+                                           )['value']
+
+        # Sort and get quantile
+        null_dist.sort()
+        if verbosity > 2:
+            print("            ...done!")
+        return null_dist
+
     else:
-        raise ValueError("Significance shuffle test must be 'full_shuffle'")
+        raise ValueError("Significance shuffle test must be 'full_shuffle'"
+                         " or 'block_shuffle'.")
 
 
 def _get_parents(nodes, exclude=None):
@@ -1548,7 +1634,7 @@ def _par_corr_to_cmi(par_corr):
         Rescaled value.
     """
 
-    return -0.5*numpy.log(1. - par_corr**2)
+    return -0.5 * numpy.log(1. - par_corr**2)
 
 
 ##
@@ -1681,8 +1767,8 @@ def _get_nearest_neighbors(array, xyz, k, standardize=True):
     # Use cKDTree to get distances eps to the k-th nearest neighbors
     # for every sample in joint space XYZ with maximum norm
     tree_xyz = spatial.cKDTree(array.T)
-    epsarray = tree_xyz.query(array.T, k=k+1, p=numpy.inf, eps=0.
-                              )[0][:,k].astype('float32')
+    epsarray = tree_xyz.query(array.T, k=k + 1, p=numpy.inf, eps=0.
+                              )[0][:, k].astype('float32')
 
     # Prepare for fast weave.inline access
     array = array.flatten()
@@ -1808,10 +1894,10 @@ class ConfidenceCMIknn():
         self.k = int(k)
 
         self.k_xz, self.k_yz, self.k_z = _get_nearest_neighbors(
-                                            array=array,
-                                            xyz=xyz,
-                                            k=k,
-                                            standardize=standardize)
+            array=array,
+            xyz=xyz,
+            k=k,
+            standardize=standardize)
 
     def get_single_estimate(self):
         """Returns a bootstrap estimate using precomputed nearest neighbors."""

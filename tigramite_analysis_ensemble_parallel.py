@@ -209,6 +209,9 @@ d = {
     #  regression (Student's t)
     # - 'full_shuffle': shuffle test as described in
     #   Runge et al. PRL (2012)
+    # - 'block_shuffle': block shuffle test works better for serially
+    #   dependent data. Block length determined using approach in Mader (2013)
+    #   [Eq. (6)]
     # Recommended for CMI: 'full_shuffle' or 'fixed'
     # Recommended for par_corr and reg: 'analytic'
     'significance': 'analytic',
