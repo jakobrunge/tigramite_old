@@ -66,3 +66,11 @@ mpi4py wrapper module "mpi.py" Copyright (C) 2012 Jobst Heitzig
 See license.txt for full text.
 
 TiGraMITe is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 3 of the License, or (at your option) any later version. TiGraMITe is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+## Usage
+
+Edit one of the tigramite_analysis_*.py template files to load your data and choose parameters. Also create a folder for your results (the default folder is 'test/'). Then run as
+
+python tigramite_analysis_template_beta.py
+
+The results pickle file and figures will be saved in the specified folder.
