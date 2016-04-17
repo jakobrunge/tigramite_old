@@ -36,14 +36,14 @@ Script to estimate time series graph and measures like MIT, ITY...
 #
 #  Import essential tigramite modules
 #
-import tigramite_preprocessing as pp
+from tigramite_src import tigramite_preprocessing as pp
 # import tigramite_preprocessing_geo as ppgeo
 
-import tigramite_estimation_beta as tigramite_estimation
-import tigramite_plotting
+from tigramite_src import tigramite_estimation_beta as tigramite_estimation
+from tigramite_src import tigramite_plotting
 
 # import Parallel module (based on mpi4py)
-# import mpi
+# from tigramite_src import mpi
 
 #  Import NumPy for the array object and fast numerics
 import numpy
@@ -76,9 +76,9 @@ plot_time_series_graph = True
 # Some parameters used in different steps of the script
 ###
 
-save_folder = '~/test/'
+save_folder = 'test/'
 project_name = 'test'
-save_fig_format = 'svg'
+save_fig_format = 'pdf'
 verbosity = 3
 
 # Optionally start logging all print output, uncomment below as well
