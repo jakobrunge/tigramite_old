@@ -69,7 +69,7 @@ TiGraMITe is free software; you can redistribute it and/or modify it under the t
 
 ## Usage
 
-Edit one of the tigramite_analysis_*.py template files to load your data and choose parameters. Also create a folder for your results (the default folder is 'test/'). Then run as
+Edit one of the tigramite_analysis_*.py template files to load your data and choose parameters. Also create a folder for your results (the default folder is 'test/'). The comments in the file explain all the parameters. Then run as
 
 $ python tigramite_analysis_template_beta.py
 
