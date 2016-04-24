@@ -333,7 +333,7 @@ def test_get_lagfunctions():
                               measure='par_corr',
                               tau_max=2, verbosity=verbosity)
     numpy.testing.assert_allclose(res[0][i, j, tau], expected_parcorr,
-                                  rtol=0.1)
+                                  rtol=0.2)
 
 
 def test_measures():
