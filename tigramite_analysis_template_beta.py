@@ -49,7 +49,8 @@ from tigramite_src import tigramite_plotting
 import numpy
 
 # import file handling packages
-import os, sys
+import os
+import sys
 import pickle
 
 # import plotting functions
@@ -108,7 +109,7 @@ matplotlib.rcParams.update(params)
 
 ###
 # Data preparation: provide numpy arrays "fulldata" (float) and
-# "fulldata_mask" (bool), both of shape
+# "sample_selector" (bool), both of shape
 # (Time, Variables)
 # and datatime (float array) of shape (Time,)
 ###
@@ -131,18 +132,18 @@ T, N = fulldata.shape
 
 ###
 # Possibly supply mask as a boolean array. Samples with a "0" are masked out.
-# The variable fulldata_mask needs to be of the same shape as fulldata.
+# The variable sample_selector needs to be of the same shape as fulldata.
 ###
 
-fulldata_mask = numpy.ones(fulldata.shape).astype('bool')
-# fulldata_mask[fulldata < -3] = False        # example of masking by value
+sample_selector = numpy.ones(fulldata.shape).astype('bool')
+# sample_selector[fulldata < -3] = False        # example of masking by value
 
 ##
 # Possibly construct symbolic time series for use with measure = 'symb'
 ##
 
-# (fulldata, fulldata_mask, T) = pp.ordinal_patt_array(
-#                                   fulldata, fulldata_mask,
+# (fulldata, sample_selector, T) = pp.ordinal_patt_array(
+#                                   fulldata, sample_selector,
 #                                   dim=2, step=1, verbosity=0)
 
 # fulldata = pp.quantile_bin_array(fulldata, bins = 3)
@@ -151,7 +152,7 @@ fulldata_mask = numpy.ones(fulldata.shape).astype('bool')
 ##
 # Define time sequence (only used for plotting)
 ##
-datatime = numpy.arange(0,  fulldata.shape[0], 1.)
+datatime = numpy.arange(0, fulldata.shape[0], 1.)
 
 # Initialize results dictionary with important variables that are used
 # in different analysis steps and should be saved to the results dictionary.
@@ -165,15 +166,15 @@ d = {
     'datatime': datatime,
 
     # Analyze only masked samples
-    # mask_type needs to be a list containing 'x' or 'y'or 'z' or any
+    # selector_type needs to be a list containing 'x' or 'y'or 'z' or any
     # combination. This will ignore masked values if they are in the
     # lagged variable X, the 'driven' variable Y and/or the condition Z in
     # the association measure I(X;Y | Z), which enables to, e.g., only
     # consider the impacton summer months. More use cases will bediscussed
     # in future papers...
-    'mask': False,
-    'fulldata_mask': fulldata_mask,
-    'mask_type': ['y'],
+    'selector': False,
+    'sample_selector': sample_selector,
+    'selector_type': ['y'],
 
     # Measure of association and params
     # - 'par_corr': linear partial correlation,
@@ -283,8 +284,8 @@ d = {
     # Variable names and node positions for graph plots (in figure coords)
     # These can be adapted to basemap plots in plot section below
     'var_names': ['0', '1', '2', '3'],
-    'node_pos': {'y': numpy.array([0.5,  1.,  0., 0.5]),
-                 'x': numpy.array([0., 0.5,  0.5, 1.])},
+    'node_pos': {'y': numpy.array([0.5, 1., 0., 0.5]),
+                 'x': numpy.array([0., 0.5, 0.5, 1.])},
 }
 
 
@@ -307,9 +308,9 @@ if estimate:
     d['results']['parents_neighbors'] = tigramite_estimation.pc_algo_all(
 
         data=d['fulldata'],
-        mask=d['mask'],
-        mask_type=d['mask_type'],
-        data_mask=d['fulldata_mask'],
+        selector=d['selector'],
+        selector_type=d['selector_type'],
+        sample_selector=d['sample_selector'],
 
         measure=d['measure'],
         measure_params=d['measure_params_algo'],
@@ -347,9 +348,9 @@ if estimate:
          d['results']['conf_' + which]
          ) = tigramite_estimation.get_lagfunctions(
             data=d['fulldata'],
-            mask=d['mask'],
-            mask_type=d['mask_type'],
-            data_mask=d['fulldata_mask'],
+            selector=d['selector'],
+            selector_type=d['selector_type'],
+            sample_selector=d['sample_selector'],
 
             parents_neighbors=d['results']['parents_neighbors'],
             cond_mode=which,
@@ -373,8 +374,9 @@ if estimate:
         )
 
     if verbosity > 0:
-        print 'Saving results...'
-
+        print("Saving results as %s" % (os.path.expanduser(save_folder) +
+                                        project_name +
+                                        '_results.pkl'))
     # Save all print output as string into dict
     # d['log_string'] = sys.stdout.log
 
@@ -402,8 +404,8 @@ if plot_time_series:
             time=datatime,
             dataseries=d['fulldata'][:, i],
             label=d['var_names'][i],
-            mask=d['mask'],
-            dataseries_mask=d['fulldata_mask'][:, i],
+            selector=d['selector'],
+            sample_selector=d['sample_selector'][:, i],
             grey_masked_samples=True,
             data_linewidth=.5,
             skip_ticks_data_x=1,
@@ -501,8 +503,8 @@ if plot_graph:
             link_colorbar_label=d['measure'] + ' ' + which + ' (cross)',
             node_colorbar_label=d['measure'] + ' ' + which + ' (auto)',
             label_fontsize=10,
-            save_name=os.path.expanduser(save_folder) + project_name +
-            '_%s_graph.%s' % (which, save_fig_format),
+            # save_name=os.path.expanduser(save_folder) + project_name +
+            # '_%s_graph.%s' % (which, save_fig_format),
 
             alpha=1.,
             node_size=20,
@@ -532,6 +534,12 @@ if plot_graph:
             link_width=None,
         )
 
+        fig.subplots_adjust(left=0.1, right=.9, bottom=.25, top=.95)
+        savestring = os.path.expanduser(os.path.expanduser(save_folder) +
+                                        project_name + '_%s_graph.%s' %
+                                        (which, save_fig_format))
+        pyplot.savefig(savestring)
+
 if plot_time_series_graph:
 
     if verbosity > 0:
@@ -546,29 +554,34 @@ if plot_time_series_graph:
         ax = fig.add_subplot(111, frame_on=False)
 
         tigramite_plotting.plot_time_series_graph(
-                fig=fig, ax=ax,
-                lagfuncs=d['results'][which],
-                sig_thres=d['results']['sig_thres_' + which],
-                var_names=d['var_names'],
-                link_colorbar_label=d['measure'] + ' ' + which,
-                save_name=os.path.expanduser(save_folder) + project_name +
-                '_%s_TSG.%s' % (which, save_fig_format),
-                rescale_cmi=False,
-                link_width=None,
-                arrow_linewidth=2.,
-                vmin_edges=-1,
-                vmax_edges=1.,
-                edge_ticks=.4,
-                cmap_edges='RdBu_r',
-                order=None,
-                node_size=5,
-                arrowhead_size=7,
-                curved_radius=.2,
-                label_fontsize=8,
-                alpha=1.,
-                node_label_size=10,
-                link_label_fontsize=6,
-                label_indent_left=.02,
-                label_indent_top=.95,
-                undirected_style='solid',
-                )
+            fig=fig, ax=ax,
+            lagfuncs=d['results'][which],
+            sig_thres=d['results']['sig_thres_' + which],
+            var_names=d['var_names'],
+            link_colorbar_label=d['measure'] + ' ' + which,
+            # save_name=os.path.expanduser(save_folder) + project_name +
+            # '_%s_TSG.%s' % (which, save_fig_format),
+            rescale_cmi=False,
+            link_width=None,
+            arrow_linewidth=2.,
+            vmin_edges=-1,
+            vmax_edges=1.,
+            edge_ticks=.4,
+            cmap_edges='RdBu_r',
+            order=None,
+            node_size=5,
+            arrowhead_size=7,
+            curved_radius=.2,
+            label_fontsize=8,
+            alpha=1.,
+            node_label_size=10,
+            label_indent_left=.02,
+            label_indent_top=.95,
+            undirected_style='solid',
+        )
+
+        fig.subplots_adjust(left=0.1, right=.98, bottom=.25, top=.9)
+        savestring = os.path.expanduser(os.path.expanduser(save_folder) +
+                                        project_name + '_%s_TSG.%s' %
+                                        (which, save_fig_format))
+        pyplot.savefig(savestring)

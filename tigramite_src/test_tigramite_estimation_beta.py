@@ -112,7 +112,8 @@ def test_pc_algo_all():
             significance=significance, sig_lev=0.999995, sig_samples=100,
             fixed_thres=0.015,
             measure_params=measure_params,
-            mask=False, mask_type=['y'], data_mask=numpy.array([0]),
+            selector=False, selector_type=['y'],
+            sample_selector=numpy.array([0]),
             initial_parents_neighbors=None,
             verbosity=verbosity)
         assert_graphs_equal(parents_neighbors, true_parents_neighbors)
@@ -126,7 +127,7 @@ def test_pc_algo_all():
         significance=significance, sig_lev=0.995, sig_samples=100,
         fixed_thres=0.015,
         measure_params=measure_params,
-        mask=False, mask_type=['y'], data_mask=numpy.array([0]),
+        selector=False, selector_type=['y'], sample_selector=numpy.array([0]),
         initial_parents_neighbors=true_parents_neighbors,
         verbosity=verbosity)
     assert_graphs_equal(parents_neighbors, true_parents_neighbors)
@@ -143,7 +144,8 @@ def test_pc_algo_all():
             significance='analytic', sig_lev=0.995, sig_samples=100,
             fixed_thres=0.015,
             measure_params=measure_params,
-            mask=False, mask_type=['y'], data_mask=numpy.array([0]),
+            selector=False, selector_type=['y'],
+            sample_selector=numpy.array([0]),
             initial_parents_neighbors=None,
             verbosity=verbosity)
         if estimate_parents_neighbors == 'both':
@@ -162,11 +164,11 @@ def test_construct_array():
                         [2, 12, 22, 32],
                         [3, 13, 23, 33],
                         [4, 14, 24, 34]])
-    data_mask = numpy.array([[1, 0, 0, 1],
-                             [1, 1, 1, 1],
-                             [0, 1, 1, 1],
-                             [1, 1, 0, 0],
-                             [1, 1, 1, 1]], dtype='bool')
+    sample_selector = numpy.array([[1, 0, 0, 1],
+                                   [1, 1, 1, 1],
+                                   [0, 1, 1, 1],
+                                   [1, 1, 0, 0],
+                                   [1, 1, 1, 1]], dtype='bool')
 
     X = [(1, -1)]
     Y = [(0, 0)]
@@ -178,33 +180,33 @@ def test_construct_array():
     res = te._construct_array(
         X=X, Y=Y, Z=Z,
         tau_max=tau_max,
-        mask=False,
+        selector=False,
         data=data,
-        data_mask=data_mask,
-        mask_type=None, verbosity=verbosity)
+        sample_selector=sample_selector,
+        selector_type=None, verbosity=verbosity)
     numpy.testing.assert_almost_equal(res[0],
-                                      numpy.array([[11.,  12.,  13.],
-                                                   [2.,   3.,   4.],
-                                                   [1.,   2.,   3.],
-                                                   [10.,  11.,  12.],
-                                                   [22.,  23.,  24.]]))
+                                      numpy.array([[11., 12., 13.],
+                                                   [2., 3., 4.],
+                                                   [1., 2., 3.],
+                                                   [10., 11., 12.],
+                                                   [22., 23., 24.]]))
     numpy.testing.assert_almost_equal(res[1], numpy.array([0, 1, 2, 2, 2]))
 
     # masking y
     res = te._construct_array(
         X=X, Y=Y, Z=Z,
         tau_max=tau_max,
-        mask=True,
+        selector=True,
         data=data,
-        data_mask=data_mask,
-        mask_type=['y'], verbosity=verbosity)
+        sample_selector=sample_selector,
+        selector_type=['y'], verbosity=verbosity)
 
     numpy.testing.assert_almost_equal(res[0],
-                                      numpy.array([[12.,  13.],
-                                                   [3.,   4.],
-                                                   [2.,   3.],
-                                                   [11.,  12.],
-                                                   [23.,  24.]]))
+                                      numpy.array([[12., 13.],
+                                                   [3., 4.],
+                                                   [2., 3.],
+                                                   [11., 12.],
+                                                   [23., 24.]]))
 
     numpy.testing.assert_almost_equal(res[1], numpy.array([0, 1, 2, 2, 2]))
 
@@ -212,10 +214,10 @@ def test_construct_array():
     res = te._construct_array(
         X=X, Y=Y, Z=Z,
         tau_max=tau_max,
-        mask=True,
+        selector=True,
         data=data,
-        data_mask=data_mask,
-        mask_type=['x', 'y', 'z'], verbosity=verbosity)
+        sample_selector=sample_selector,
+        selector_type=['x', 'y', 'z'], verbosity=verbosity)
 
     numpy.testing.assert_almost_equal(res[0],
                                       numpy.array([[13.],
@@ -528,7 +530,7 @@ class test__get_confidence_estimate():
         self.array, self.xyz = te._construct_array(X=[(0, -1)], Y=[(1, 0)],
                                                    Z=[(0, -2), (1, -1)],
                                                    tau_max=2,
-                                                   data=data, mask=False)
+                                                   data=data, selector=False)
 
     def test_shuffle_vs_alpha(self):
         print("Checking that bootstrap conf intervals equal analytical ones "

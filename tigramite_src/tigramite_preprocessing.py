@@ -76,7 +76,7 @@ def lowhighpass_filter(data, cutperiod, pass_periods='low'):
 
 
 def smooth(data, smooth_width, kernel='gaussian',
-           data_mask=None, residuals=False):
+           sample_selector=None, residuals=False):
     """Returns either smoothed time series or its residuals.
 
     the difference between the original
@@ -93,8 +93,8 @@ def smooth(data, smooth_width, kernel='gaussian',
         smooth_width (float): Window width of smoothing, 2*sigma for a
             gaussian.
         kernel (str, optional): 'gaussian' or 'heaviside' for a running mean.
-        data_mask (bool array, optional): Data mask where False labels masked
-            samples.
+        sample_selector (bool array, optional): Data mask where False labels
+            masked samples.
         residuals (bool, optional): True if residuals should be returned.
 
     Returns:
@@ -116,7 +116,7 @@ def smooth(data, smooth_width, kernel='gaussian',
         wtmp[:numpy.ceil(smooth_width / 2.)] = 1
         window = scipy.linalg.toeplitz(wtmp)
 
-    if data_mask is None:
+    if sample_selector is None:
         if numpy.ndim(data) == 1:
             smoothed_data = (data * window).sum(axis=1) / window.sum(axis=1)
         else:
@@ -126,14 +126,14 @@ def smooth(data, smooth_width, kernel='gaussian',
                     data[:, i] * window).sum(axis=1) / window.sum(axis=1)
     else:
         if numpy.ndim(data) == 1:
-            smoothed_data = ((data * window * data_mask).sum(axis=1) /
-                             (window * data_mask).sum(axis=1))
+            smoothed_data = ((data * window * sample_selector).sum(axis=1) /
+                             (window * sample_selector).sum(axis=1))
         else:
             smoothed_data = numpy.zeros(data.shape)
             for i in range(data.shape[1]):
                 smoothed_data[:, i] = ((
-                    data[:, i] * window * data_mask[:, i]).sum(axis=1) /
-                    (window * data_mask[:, i]).sum(axis=1))
+                    data[:, i] * window * sample_selector[:, i]).sum(axis=1) /
+                    (window * sample_selector[:, i]).sum(axis=1))
 
     if residuals:
         return data - smoothed_data
@@ -162,14 +162,14 @@ def weighted_avg_and_std(values, axis, weights):
     return (average, numpy.sqrt(variance))
 
 
-def time_bin_with_mask(data, time_bin_length, data_mask=None):
+def time_bin_with_mask(data, time_bin_length, sample_selector=None):
     """Returns time binned data where only about non-masked values is averaged.
 
     Args:
         data (array, optional): Data array of shape (time, variables).
         time_bin_length (int): Length of time bin.
-        data_mask (bool array, optional): Data mask where False labels masked
-            samples.
+        sample_selector (bool array, optional): Data mask where False labels
+            masked samples.
 
     Returns:
         Tuple of time-binned data array and new length of array.
@@ -177,22 +177,22 @@ def time_bin_with_mask(data, time_bin_length, data_mask=None):
 
     n_time = len(data)
 
-    if data_mask is None:
-        data_mask = numpy.ones(data.shape)
+    if sample_selector is None:
+        sample_selector = numpy.ones(data.shape)
 
     if numpy.ndim(data) == 1.:
         data.shape = (n_time, 1)
-        data_mask.shape = (n_time, 1)
+        sample_selector.shape = (n_time, 1)
 
     bindata = numpy.zeros(
         (n_time / time_bin_length,) + data.shape[1:], dtype="float32")
     for index, i in enumerate(range(0, n_time - time_bin_length + 1,
                                     time_bin_length)):
         # print weighted_avg_and_std(fulldata[i:i+time_bin_length], axis=0,
-        # weights=fulldata_mask[i:i+time_bin_length])[0]
+        # weights=sample_selector[i:i+time_bin_length])[0]
         bindata[index] = weighted_avg_and_std(data[i:i + time_bin_length],
                                               axis=0,
-                                              weights=data_mask[i:i +
+                                              weights=sample_selector[i:i +
                                               time_bin_length])[0]
 
     n_time, grid_size = bindata.shape

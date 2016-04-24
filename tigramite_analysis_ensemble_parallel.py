@@ -49,7 +49,8 @@ from tigramite_src import mpi
 import numpy
 
 # import file handling packages
-import os, sys
+import os
+import sys
 import pickle
 
 ###
@@ -65,13 +66,13 @@ import pickle
 ###
 
 save_folder = 'test/'
-project_name = 'test'
+project_name = 'test_parallel'
 # save_fig_format = 'pdf'
 verbosity = 1
 
 ###
 # Data preparation: provide numpy arrays "fulldata" (float) and
-# "fulldata_mask" (bool), both of shape
+# "sample_selector" (bool), both of shape
 # (Time, Variables)
 # and datatime (float array) of shape (Time,)
 ###
@@ -88,28 +89,25 @@ links_coeffs = {0: [((0, -1), a)],
                 3: [((3, -1), a), ((0, -3), c3)],
                 }
 
-# fulldata, true_parents_neighbors = pp.var_process(links_coeffs, use='inv_inno_cov', T=T)
-# T, N = fulldata.shape
-
 fulldata_list = [pp.var_process(links_coeffs, use='inv_inno_cov', T=T)[0]
                  for i in range(10)]
 # fulldata_list = [numpy.random.randn(T, 4).argsort(axis=0).argsort(axis=0)
 #                  for i in range(100)]
 ###
 # Possibly supply mask as a boolean array. Samples with a "0" are masked out.
-# The variable fulldata_mask needs to be of the same shape as fulldata.
+# The variable sample_selector needs to be of the same shape as fulldata.
 ###
 
-fulldata_mask_list = [numpy.ones(data.shape).astype('bool')
-                      for data in fulldata_list]
-# fulldata_mask[fulldata < -3] = False        # example of masking by value
+sample_selector_list = [numpy.ones(data.shape).astype('bool')
+                        for data in fulldata_list]
+# sample_selector[fulldata < -3] = False        # example of masking by value
 
 ##
 # Possibly construct symbolic time series for use with measure = 'symb'
 ##
 
-# (fulldata, fulldata_mask, T) = pp.ordinal_patt_array(
-#                                   fulldata, fulldata_mask,
+# (fulldata, sample_selector, T) = pp.ordinal_patt_array(
+#                                   fulldata, sample_selector,
 #                                   dim=2, step=1, verbosity=0)
 
 # fulldata = pp.quantile_bin_array(fulldata, bins = 3)
@@ -118,7 +116,7 @@ fulldata_mask_list = [numpy.ones(data.shape).astype('bool')
 ##
 # Define time sequence (only used for plotting)
 ##
-datatime_list = [numpy.arange(0,  data.shape[0], 1.)
+datatime_list = [numpy.arange(0, data.shape[0], 1.)
                  for data in fulldata_list]
 
 
@@ -134,15 +132,15 @@ d = {
     'datatime': datatime_list,
 
     # Analyze only masked samples
-    # mask_type needs to be a list containing 'x' or 'y'or 'z' or any
+    # selector_type needs to be a list containing 'x' or 'y'or 'z' or any
     # combination. This will ignore masked values if they are in the
     # lagged variable X, the 'driven' variable Y and/or the condition Z in
     # the association measure I(X;Y | Z), which enables to, e.g., only
     # consider the impacton summer months. More use cases will bediscussed
     # in future papers...
-    'mask': False,
-    'fulldata_mask': fulldata_mask_list,
-    'mask_type': ['y'],
+    'selector': False,
+    'sample_selector': sample_selector_list,
+    'selector_type': ['y'],
 
     # Measure of association and params
     # - 'par_corr': linear partial correlation,
@@ -276,9 +274,9 @@ def master():
         tigramite_estimation._sanity_checks(
             which='pc_algo',
             data=d['fulldata'][ens],
-            mask=d['mask'],
-            mask_type=d['mask_type'],
-            data_mask=d['fulldata_mask'][ens],
+            selector=d['selector'],
+            selector_type=d['selector_type'],
+            sample_selector=d['sample_selector'][ens],
 
             measure=d['measure'],
             measure_params=d['measure_params_algo'],
@@ -297,9 +295,9 @@ def master():
     d['results'] = {}
 
     if verbosity > 0:
-        print("\n" + "-"*60 +
+        print("\n" + "-" * 60 +
               "\nEstimating parents for all variables:"
-              "\n" + "-"*60)
+              "\n" + "-" * 60)
 
     job_index = 0
     for ens in ensemble_members:
@@ -308,25 +306,25 @@ def master():
             mpi.submit_call(
                 "tigramite_estimation._pc_algo",
                 kwargs={
-                        'data': d['fulldata'][ens],
-                        'j': j,
-                        'parents_or_neighbors': 'parents',
-                        'all_parents': None,
-                        'tau_max': d['tau_max'],
-                        'initial_conds': d['initial_conds'],
-                        'max_conds': d['max_conds'],
-                        'max_trials': d['max_trials'],
-                        'measure': d['measure'],
-                        'measure_params': d['measure_params_algo'],
-                        'significance': d['significance'],
-                        'sig_lev': d['sig_lev'],
-                        'fixed_thres': d['fixed_thres'],
-                        'sig_samples': d['sig_samples'],
-                        'mask': d['mask'],
-                        'mask_type': d['mask_type'],
-                        'data_mask': d['fulldata_mask'][ens],
-                        'verbosity': verbosity
-                        },
+                    'data': d['fulldata'][ens],
+                    'j': j,
+                    'parents_or_neighbors': 'parents',
+                    'all_parents': None,
+                    'tau_max': d['tau_max'],
+                    'initial_conds': d['initial_conds'],
+                    'max_conds': d['max_conds'],
+                    'max_trials': d['max_trials'],
+                    'measure': d['measure'],
+                    'measure_params': d['measure_params_algo'],
+                    'significance': d['significance'],
+                    'sig_lev': d['sig_lev'],
+                    'fixed_thres': d['fixed_thres'],
+                    'sig_samples': d['sig_samples'],
+                    'selector': d['selector'],
+                    'selector_type': d['selector_type'],
+                    'sample_selector': d['sample_selector'][ens],
+                    'verbosity': verbosity
+                },
                 id=job_index)
             job_index += 1
 
@@ -340,9 +338,9 @@ def master():
 
     if d['solid_contemp_links']:
         if verbosity > 0:
-            print("\n" + "-"*60 +
+            print("\n" + "-" * 60 +
                   "\nEstimating neighbors for all variables:"
-                  "\n" + "-"*60)
+                  "\n" + "-" * 60)
 
         job_index = 0
         for ens in ensemble_members:
@@ -365,11 +363,11 @@ def master():
                         'sig_lev': d['sig_lev'],
                         'fixed_thres': d['fixed_thres'],
                         'sig_samples': d['sig_samples'],
-                        'mask': d['mask'],
-                        'mask_type': d['mask_type'],
-                        'data_mask': d['fulldata_mask'][ens],
+                        'selector': d['selector'],
+                        'selector_type': d['selector_type'],
+                        'sample_selector': d['sample_selector'][ens],
                         'verbosity': verbosity
-                        },
+                    },
                     id=job_index)
                 job_index += 1
 
@@ -393,9 +391,9 @@ def master():
     # d['cond_types'] = cond_types
 
     if verbosity > 0:
-        print("\n" + "-"*60 +
+        print("\n" + "-" * 60 +
               "\nEstimating lag functions for all variables:"
-              "\n" + "-"*60)
+              "\n" + "-" * 60)
 
     job_index = 0
     for ens in ensemble_members:
@@ -412,11 +410,11 @@ def master():
                     kwargs={
                         'selected_variables': [j],
                         'data': d['fulldata'][ens],
-                        'mask': d['mask'],
-                        'mask_type': d['mask_type'],
-                        'data_mask': d['fulldata_mask'][ens],
+                        'selector': d['selector'],
+                        'selector_type': d['selector_type'],
+                        'sample_selector': d['sample_selector'][ens],
                         'parents_neighbors': d['results'][ens][
-                                             'parents_neighbors'],
+                            'parents_neighbors'],
                         'cond_mode': which,
                         'solid_contemp_links': d['solid_contemp_links'],
                         'tau_max': d['tau_max'],
@@ -434,7 +432,7 @@ def master():
                         'conf_samples': d['conf_samples'],
 
                         'verbosity': verbosity
-                        },
+                    },
                     id=job_index)
 
                 job_index += 1
@@ -444,11 +442,11 @@ def master():
         for which in d['cond_types']:
 
             d['results'][ens][which] = numpy.zeros(
-                                        (d['N'],  d['N'], d['tau_max'] + 1))
+                (d['N'], d['N'], d['tau_max'] + 1))
             d['results'][ens]['sig_thres_' + which] = numpy.zeros(
-                                        (d['N'],  d['N'], d['tau_max'] + 1))
+                (d['N'], d['N'], d['tau_max'] + 1))
             d['results'][ens]['conf_' + which] = numpy.zeros(
-                                        (d['N'], d['N'], d['tau_max'] + 1, 2))
+                (d['N'], d['N'], d['tau_max'] + 1, 2))
 
             for j in range(d['N']):
 
@@ -462,7 +460,9 @@ def master():
                 job_index += 1
 
     if verbosity > 0:
-        print 'Saving results...'
+        print("Saving results as %s" % (os.path.expanduser(save_folder) +
+                                        project_name +
+                                        '_results.pkl'))
 
     pickle.dump(d, open(os.path.expanduser(save_folder) + project_name +
                         '_results.pkl', 'w'))

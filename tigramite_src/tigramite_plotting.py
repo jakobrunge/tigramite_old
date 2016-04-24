@@ -204,8 +204,8 @@ def get_absmax(lagfuncs):
 
 
 def add_timeseries(fig, axes, i, time, dataseries, label,
-                   mask=False,
-                   dataseries_mask=None,
+                   selector=False,
+                   sample_selector=None,
                    grey_masked_samples=False,
                    data_linewidth=1.,
                    skip_ticks_data_x=1,
@@ -227,8 +227,8 @@ def add_timeseries(fig, axes, i, time, dataseries, label,
         time (array): Timelabel array.
         dataseries (array): One-dimensional data array.
         label (str): Variable label.
-        mask (bool, optional): Whether to use masked data.
-        dataseries_mask (array, optional): Data mask where False labels masked
+        selector (bool, optional): Whether to use masked data.
+        sample_selector (array, optional): Data mask where False labels masked
             samples.
         grey_masked_samples (bool or str, optional): Whether to mark masked
             samples by grey fills ('fill') or grey data ('data').
@@ -250,17 +250,17 @@ def add_timeseries(fig, axes, i, time, dataseries, label,
     except:
         ax = axes
 
-    if mask:
-        maskdata = numpy.ma.masked_where(dataseries_mask == 0, dataseries)
+    if selector:
+        maskdata = numpy.ma.masked_where(sample_selector == 0, dataseries)
 
         if grey_masked_samples == 'fill':
             ax.fill_between(time, maskdata.min(), maskdata.max(),
-                            where=dataseries_mask == 0, color='grey',
+                            where=sample_selector == 0, color='grey',
                             interpolate=True,
                             linewidth=0., alpha=grey_alpha)
         elif grey_masked_samples == 'data':
             ax.plot(time, dataseries,
-                    color='grey',  marker='.', markersize=data_linewidth,
+                    color='grey', marker='.', markersize=data_linewidth,
                     linewidth=data_linewidth, clip_on=False,
                     alpha=grey_alpha)
 
@@ -272,12 +272,12 @@ def add_timeseries(fig, axes, i, time, dataseries, label,
                 color=color, linewidth=data_linewidth, clip_on=False)
 
     if last:
-        make_nice_axes(ax, where=['left', 'bottom'],  skip=(
+        make_nice_axes(ax, where=['left', 'bottom'], skip=(
             skip_ticks_data_x, skip_ticks_data_y))
         ax.set_xlabel(r'%s' % time_label, fontsize=label_fontsize)
     else:
         make_nice_axes(
-            ax, where=['left'],  skip=(skip_ticks_data_x, skip_ticks_data_y))
+            ax, where=['left'], skip=(skip_ticks_data_x, skip_ticks_data_y))
     # ax.get_xaxis().get_major_formatter().set_useOffset(False)
 
     ax.xaxis.set_major_formatter(FormatStrFormatter('%.0f'))
@@ -300,8 +300,8 @@ def add_timeseries(fig, axes, i, time, dataseries, label,
 def plot_timeseries(data, datatime, var_names, save_name,
                     var_units=None,
                     time_label='years',
-                    mask=False,
-                    data_mask=None,
+                    selector=False,
+                    sample_selector=None,
                     grey_masked_samples=True,
                     data_linewidth=1.,
                     skip_ticks_data_x=1,
@@ -318,9 +318,9 @@ def plot_timeseries(data, datatime, var_names, save_name,
         save_name (str): figure file name.
         var_units (list, optional): List of variable units.
         time_label (str, optional): ...
-        mask (bool, optional): Whether to use masked data.
-        data_mask (bool array, optional): Data mask where False labels masked
-            samples.
+        selector (bool, optional): Whether to use masked data.
+        sample_selector (bool array, optional): Data mask where False labels
+            masked samples.
         grey_masked_samples (bool or str, optional): Whether to mark masked
             samples by grey fills ('fill') or grey data ('data').
         data_linewidth (float, optional): Linewidth.
@@ -343,8 +343,8 @@ def plot_timeseries(data, datatime, var_names, save_name,
                        time=datatime,
                        dataseries=data[:, i],
                        label=var_names[i],
-                       mask=mask,
-                       dataseries_mask=data_mask[:, i],
+                       selector=selector,
+                       sample_selector=sample_selector[:, i],
                        grey_masked_samples=grey_masked_samples,
                        data_linewidth=data_linewidth,
                        skip_ticks_data_x=skip_ticks_data_x,
@@ -370,10 +370,10 @@ class setup_matrix():
                  label_space_top=.98,
                  legend_width=.15,
                  legend_fontsize=10,
-                 x_base=1., y_base=0.2,
+                 x_base=1., y_base=0.4,
                  plot_gridlines=False,
                  lag_units='months',
-                 label_fontsize=8):
+                 label_fontsize=10):
         """Initialize matrix of panels."""
 
         self.tau_max = tau_max
@@ -425,8 +425,9 @@ class setup_matrix():
                                                          x_base)))
                     if x_base / 2. % 1 == 0:
                         self.axes_dict[(i, j)].xaxis.set_minor_locator(
-                          ticker.FixedLocator(numpy.arange(0, self.tau_max + 1,
-                                                           x_base / 2.)))
+                            ticker.FixedLocator(numpy.arange(0, self.tau_max +
+                                                             1,
+                                                             x_base / 2.)))
                 if y_base is not None:
                     self.axes_dict[(i, j)].yaxis.set_major_locator(
                         ticker.FixedLocator(
@@ -489,7 +490,8 @@ class setup_matrix():
                                             lagfuncs)),
                 if plot_confidence:
                     print(" with %2.f%% conf in %s" % ((1. - (1. - conf_lev) *
-                          2) * 100, conf[i, j, tau]))
+                                                        2) * 100, conf[i, j,
+                                                                       tau]))
                 else:
                     print ''
 
@@ -560,7 +562,7 @@ class setup_matrix():
                 markersize = item[3]
                 alpha = item[4]
 
-                axlegend.plot([],  [], linestyle='', color=color,
+                axlegend.plot([], [], linestyle='', color=color,
                               marker=marker, markersize=markersize,
                               label=label, alpha=alpha)
             axlegend.legend(loc='upper left', ncol=1,
@@ -588,19 +590,19 @@ class setup_matrix():
 
 
 def draw_network_with_curved_edges(
-       fig, ax,
-       G, pos,
-       node_rings,
-       node_labels, node_label_size, node_alpha=1., standard_size=100,
-       standard_cmap='OrRd', standard_color='grey', log_sizes=False,
-       cmap_links='YlOrRd', cmap_links_edges='YlOrRd', links_vmin=0.,
-       links_vmax=1., links_edges_vmin=0., links_edges_vmax=1.,
-       links_ticks=.2, links_edges_ticks=.2, link_label_fontsize=8,
-       arrowstyle='-|>', arrowhead_size=3., curved_radius=.2, label_fontsize=4,
-       label_fraction=.5, link_colorbar_label='link',
-       link_edge_colorbar_label='link_edge',
-       undirected_curved=False, undirected_style='solid',
-       ):  # , params=None):
+    fig, ax,
+    G, pos,
+    node_rings,
+    node_labels, node_label_size, node_alpha=1., standard_size=100,
+    standard_cmap='OrRd', standard_color='grey', log_sizes=False,
+    cmap_links='YlOrRd', cmap_links_edges='YlOrRd', links_vmin=0.,
+    links_vmax=1., links_edges_vmin=0., links_edges_vmax=1.,
+    links_ticks=.2, links_edges_ticks=.2, link_label_fontsize=8,
+    arrowstyle='-|>', arrowhead_size=3., curved_radius=.2, label_fontsize=4,
+    label_fraction=.5, link_colorbar_label='link',
+    link_edge_colorbar_label='link_edge',
+    undirected_curved=False, undirected_style='solid',
+):  # , params=None):
     """Function to draw a network from networkx graph instance.
 
     Various attributes are used to specify the graph's properties.
@@ -697,7 +699,7 @@ def draw_network_with_curved_edges(
                 label_vert = verts[(1. - label_fraction) * len(verts), :]
                 l = d['label']
                 string = str(l)
-                ax.text(label_vert[0],  label_vert[1], string,
+                ax.text(label_vert[0], label_vert[1], string,
                         fontsize=link_label_fontsize,
                         verticalalignment='center',
                         horizontalalignment='center')
@@ -769,7 +771,7 @@ def draw_network_with_curved_edges(
                     data_to_rgb, cax=cax_n, orientation='horizontal')
                 try:
                     cb_n.set_ticks(numpy.arange(myround(vmin,
-                                   node_rings[ring]['ticks'], 'down'), myround(
+                                node_rings[ring]['ticks'], 'down'), myround(
                         vmax, node_rings[ring]['ticks'], 'up') +
                         node_rings[ring]['ticks'], node_rings[ring]['ticks']))
                 except:
@@ -818,12 +820,12 @@ def draw_network_with_curved_edges(
                        clip_on=False, linewidth=.1, zorder=-ring)
 
             if log_sizes:
-                ax.text(0., 0.,  '         ' * ring + '%.2f' %
+                ax.text(0., 0., '         ' * ring + '%.2f' %
                         (numpy.exp(max_sizes[ring]) - 1.),
                         fontsize=node_label_size,
                         horizontalalignment='left', verticalalignment='center')
             else:
-                ax.text(0., 0.,  '         ' * ring + '%.2f' % max_sizes[ring],
+                ax.text(0., 0., '         ' * ring + '%.2f' % max_sizes[ring],
                         fontsize=node_label_size,
                         horizontalalignment='left', verticalalignment='center')
 
@@ -873,15 +875,15 @@ def draw_network_with_curved_edges(
         try:
             cb_e.set_ticks(numpy.arange(myround(links_vmin, links_ticks,
                                                 'down'),
-                           myround(links_vmax, links_ticks, 'up') +
-                           links_ticks, links_ticks))
+                                     myround(links_vmax, links_ticks, 'up') +
+                                     links_ticks, links_ticks))
         except:
             print 'no ticks given'
 
         cb_e.outline.remove()
         # cb_n.set_ticks()
         cax_e.set_xlabel(
-            link_colorbar_label, labelpad=1,  fontsize=label_fontsize)
+            link_colorbar_label, labelpad=1, fontsize=label_fontsize)
 
     if cmap_links_edges is not None and len(all_links_edge_weights) > 0:
         if links_edges_vmin is None:
@@ -928,7 +930,7 @@ def draw_network_with_curved_edges(
                 seen[(u, v)] = draw_edge(ax, u, v, d, seen, directed=False)
 
 
-def plot_graph(lagfuncs, sig_thres, var_names, save_name, fig, ax,
+def plot_graph(lagfuncs, sig_thres, var_names, fig, ax,
                link_colorbar_label='',
                node_colorbar_label='',
                rescale_cmi=False,
@@ -940,14 +942,14 @@ def plot_graph(lagfuncs, sig_thres, var_names, save_name, fig, ax,
                vmax_edges=1.,
                edge_ticks=.4,
                cmap_edges='RdBu_r',
-               vmin_nodes=None,
-               vmax_nodes=None,
-               node_ticks=.1,
-               cmap_nodes='RdBu_r',
-               node_size=30,
+               vmin_nodes=0,
+               vmax_nodes=1.,
+               node_ticks=.4,
+               cmap_nodes='OrRd',
+               node_size=20,
                arrowhead_size=20,
                curved_radius=.2,
-               label_fontsize=8,
+               label_fontsize=10,
                alpha=1.,
                node_label_size=10,
                link_label_fontsize=6,
@@ -996,7 +998,7 @@ def plot_graph(lagfuncs, sig_thres, var_names, save_name, fig, ax,
             # of the link
             # Draw link if u--v OR v--u at lag 0 is nonzero
             dic['undirected'] = ((numpy.abs(lagfuncs[u, v][0]) >=
-                                 sig_thres[u, v][0]) or
+                                  sig_thres[u, v][0]) or
                                  (numpy.abs(lagfuncs[v, u][0]) >=
                                   sig_thres[v, u][0]))
             dic['undirected_alpha'] = alpha
@@ -1096,12 +1098,12 @@ def plot_graph(lagfuncs, sig_thres, var_names, save_name, fig, ax,
         link_colorbar_label=link_colorbar_label,
         undirected_style=undirected_style)
 
-    fig.subplots_adjust(left=0.1, right=.9, bottom=.25, top=.95)
-    savestring = os.path.expanduser(save_name)
-    pyplot.savefig(savestring)
+    # fig.subplots_adjust(left=0.1, right=.9, bottom=.25, top=.95)
+    # savestring = os.path.expanduser(save_name)
+    # pyplot.savefig(savestring)
 
 
-def plot_time_series_graph(lagfuncs, sig_thres, var_names, save_name, fig, ax,
+def plot_time_series_graph(lagfuncs, sig_thres, var_names, fig, ax,
                            link_colorbar_label='',
                            rescale_cmi=False,
                            link_width=None,
@@ -1111,18 +1113,17 @@ def plot_time_series_graph(lagfuncs, sig_thres, var_names, save_name, fig, ax,
                            edge_ticks=.4,
                            cmap_edges='RdBu_r',
                            order=None,
-                           node_size=30,
+                           node_size=10,
                            arrowhead_size=20,
                            curved_radius=.2,
-                           label_fontsize=8,
+                           label_fontsize=10,
                            alpha=1.,
                            node_label_size=10,
-                           link_label_fontsize=6,
-                           label_indent_left=.2,
+                           # link_label_fontsize=8,
+                           label_indent_left=0.,
                            label_indent_top=.95,
                            undirected_style='solid',
                            ):
-
     """Creates and saves plot of time series graph.
 
     Based on lag function and sig_thres array. This function needs docstrings!
@@ -1158,13 +1159,13 @@ def plot_time_series_graph(lagfuncs, sig_thres, var_names, save_name, fig, ax,
     tsg_attr = numpy.zeros((N * max_lag, N * max_lag))
 
     for i, j, tau in numpy.column_stack(numpy.where(numpy.abs(lagfuncs) >=
-                                        sig_thres)):
+                                                    sig_thres)):
         #                    print '\n',i, j, tau
         #                    print numpy.where(nonmasked[:,j])[0]
 
         for t in range(max_lag):
             if (0 <= translate(i, t - tau) and
-               translate(i, t - tau) % max_lag <= translate(j, t) % max_lag):
+                translate(i, t - tau) % max_lag <= translate(j, t) % max_lag):
                 # print translate(i, t-tau), translate(j, t), lagfuncs[i,j,tau]
                 tsg[translate(i, t - tau), translate(j, t)
                     ] = lagfuncs[i, j, tau]
@@ -1190,9 +1191,9 @@ def plot_time_series_graph(lagfuncs, sig_thres, var_names, save_name, fig, ax,
 
             dic['undirected_alpha'] = alpha
             dic['undirected_color'] = get_absmax(
-                                        numpy.array([[[tsg_attr[u, v],
-                                                       tsg_attr[v, u]]]])
-                                        ).squeeze()
+                numpy.array([[[tsg_attr[u, v],
+                               tsg_attr[v, u]]]])
+            ).squeeze()
             dic['undirected_width'] = arrow_linewidth
             all_strengths.append(dic['undirected_color'])
 
@@ -1265,7 +1266,7 @@ def plot_time_series_graph(lagfuncs, sig_thres, var_names, save_name, fig, ax,
 
         arrowstyle='-|>', arrowhead_size=arrowhead_size,
         curved_radius=curved_radius, label_fontsize=label_fontsize,
-        link_label_fontsize=link_label_fontsize, label_fraction=.5,
+        label_fraction=.5,
         link_colorbar_label=link_colorbar_label, undirected_curved=True,
         undirected_style=undirected_style)
 
@@ -1292,6 +1293,6 @@ def plot_time_series_graph(lagfuncs, sig_thres, var_names, save_name, fig, ax,
                     horizontalalignment='center', verticalalignment='top',
                     transform=trans)
 
-    fig.subplots_adjust(left=0.1, right=.98, bottom=.25, top=.9)
-    savestring = os.path.expanduser(save_name)
-    pyplot.savefig(savestring)
+    # fig.subplots_adjust(left=0.1, right=.98, bottom=.25, top=.9)
+    # savestring = os.path.expanduser(save_name)
+    # pyplot.savefig(savestring)

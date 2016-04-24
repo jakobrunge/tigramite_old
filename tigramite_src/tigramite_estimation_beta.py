@@ -59,12 +59,12 @@ def _sanity_checks(which='pc_algo',
                    measure='par_corr', measure_params=None,
                    significance='analytic', sig_lev=0.975, sig_samples=100,
                    fixed_thres=0.015,
-                   mask=False, mask_type=None, data_mask=None,
+                   selector=False, selector_type=None, sample_selector=None,
                    initial_parents_neighbors=None,
                    selected_variables=None,
                    parents_neighbors=None,
                    cond_mode='none',
-                   solid_contemp_links=True,
+                   solid_contemp_links=False,
                    confidence=False, conf_lev=0.95, conf_samples=100,
                    verbosity=0):
     """Sanity checks of data and params
@@ -92,12 +92,12 @@ def _sanity_checks(which='pc_algo',
         sig_samples (int, optional): Number of samples for shuffle significance
             test.
         fixed_thres (float, optional): Fixed significance threshold.
-        mask (bool, optional): Whether to use masked data.
-        mask_type (list, optional): Can be ['x', 'y', 'z'] or either of these
-            strings to mark for which variables in the dependence measure
+        selector (bool, optional): Whether to use masked data.
+        selector_type (list, optional): Can be ['x', 'y', 'z'] or either of
+            these strings to mark for which variables in the dependence measure
             I(X; Y | Z) the samples should be masked.
-        data_mask (bool array, optional): Data mask where False labels masked
-            samples.
+        sample_selector (bool array, optional): Data mask where False labels
+            masked samples.
         initial_parents_neighbors (dict, optional): False or None to
             start from fully connected graph, else a dictionary of format
             {..., j:[(var1, lag1), (var2, lag2), ...], ...} for all variables
@@ -149,20 +149,23 @@ def _sanity_checks(which='pc_algo',
     if significance == 'fixed' and fixed_thres <= 0.:
         raise ValueError("fixed_thres = %.2f, must be > 0" % fixed_thres)
 
-    if mask:
-        if type(data_mask) != numpy.ndarray:
-            raise TypeError("data_mask is of type %s, " % type(data_mask) +
+    if selector:
+        if type(sample_selector) != numpy.ndarray:
+            raise TypeError("sample_selector is of type %s, " %
+                            type(sample_selector) +
                             "must be numpy.ndarray")
-        if numpy.isnan(data_mask).sum() != 0:
-            raise ValueError("NaNs in the data_mask")
-        if mask_type is None or len(set(mask_type) - set(['x', 'y', 'z'])) > 0:
-            raise ValueError("mask_type = %s, but must be list containing"
-                             % mask_type + " 'x','y','z', or any combination")
-        if data.shape != data_mask.shape:
+        if numpy.isnan(sample_selector).sum() != 0:
+            raise ValueError("NaNs in the sample_selector")
+        if selector_type is None or len(set(selector_type) -
+                                        set(['x', 'y', 'z'])) > 0:
+            raise ValueError("selector_type = %s, but must be list containing"
+                             % selector_type + " 'x','y','z', or any "
+                             "combination")
+        if data.shape != sample_selector.shape:
             raise ValueError("shape mismatch: data.shape = %s"
                              % str(data.shape) +
-                             " but data_mask.shape = %s, must be the same"
-                             % str(data_mask.shape))
+                             " but sample_selector.shape = %s, must identical"
+                             % str(sample_selector.shape))
 
     if measure not in ['par_corr', 'reg', 'cmi_knn', 'cmi_symb',
                        'cmi_gauss']:
@@ -256,7 +259,7 @@ def pc_algo_all(data, estimate_parents_neighbors='both',
                 measure='par_corr', measure_params=None,
                 significance='analytic', sig_lev=0.975, sig_samples=100,
                 fixed_thres=0.015,
-                mask=False, mask_type=None, data_mask=None,
+                selector=False, selector_type=None, sample_selector=None,
                 initial_parents_neighbors=None,
                 verbosity=0):
     """Function to estimate parents of all processes of multivariate dataset.
@@ -282,12 +285,12 @@ def pc_algo_all(data, estimate_parents_neighbors='both',
         sig_samples (int, optional): Number of samples for shuffle significance
             test.
         fixed_thres (float, optional): Fixed significance threshold.
-        mask (bool, optional): Whether to use masked data.
-        mask_type (list, optional): Can be ['x', 'y', 'z'] or either of these
-            strings to mark for which variables in the dependence measure
+        selector (bool, optional): Whether to use masked data.
+        selector_type (list, optional): Can be ['x', 'y', 'z'] or either of
+            these strings to mark for which variables in the dependence measure
             I(X; Y | Z) the samples should be masked.
-        data_mask (bool array, optional): Data mask where False labels masked
-            samples.
+        sample_selector (bool array, optional): Data mask where False labels
+            masked samples.
         initial_parents_neighbors (dict, optional): False or None to
             start from fully connected graph, else a dictionary of format
             {..., j:[(var1, lag1), (var2, lag2), ...], ...} for all variables
@@ -311,7 +314,8 @@ def pc_algo_all(data, estimate_parents_neighbors='both',
                    significance=significance, sig_lev=sig_lev,
                    sig_samples=sig_samples,
                    fixed_thres=fixed_thres,
-                   mask=mask, mask_type=mask_type, data_mask=data_mask,
+                   selector=selector, selector_type=selector_type,
+                   sample_selector=sample_selector,
                    initial_parents_neighbors=initial_parents_neighbors,
                    verbosity=verbosity)
 
@@ -338,7 +342,8 @@ def pc_algo_all(data, estimate_parents_neighbors='both',
                            sig_samples=sig_samples,
                            fixed_thres=fixed_thres,
                            measure_params=measure_params,
-                           mask=mask, mask_type=mask_type, data_mask=data_mask,
+                           selector=selector, selector_type=selector_type,
+                           sample_selector=sample_selector,
                            verbosity=verbosity)
             parents_neighbors[j] = res
 
@@ -360,7 +365,8 @@ def pc_algo_all(data, estimate_parents_neighbors='both',
                            significance=significance, sig_lev=sig_lev,
                            sig_samples=sig_samples, fixed_thres=fixed_thres,
                            measure_params=measure_params,
-                           mask=mask, mask_type=mask_type, data_mask=data_mask,
+                           selector=selector, selector_type=selector_type,
+                           sample_selector=sample_selector,
                            verbosity=verbosity)
             parents_neighbors[j] += res
 
@@ -488,7 +494,7 @@ def _pc_algo(data, j,
              significance='fixed', sig_lev=0.975, sig_samples=100,
              fixed_thres=0.015,
              measure_params=None,
-             mask=False, mask_type=None, data_mask=None,
+             selector=False, selector_type=None, sample_selector=None,
              verbosity=0):
     """Implementation of PC algorithm as described in Runge et al. PRL (2012).
 
@@ -524,12 +530,12 @@ def _pc_algo(data, j,
         sig_samples (int, optional): Number of samples for shuffle significance
             test.
         fixed_thres (float, optional): Fixed significance threshold.
-        mask (bool, optional): Whether to use masked data.
-        mask_type (list, optional): Can be ['x', 'y', 'z'] or either of these
-            strings to mark for which variables in the dependence measure
+        selector (bool, optional): Whether to use masked data.
+        selector_type (list, optional): Can be ['x', 'y', 'z'] or either of
+            these strings to mark for which variables in the dependence measure
             I(X; Y | Z) the samples should be masked.
-        data_mask (bool array, optional): Data mask where False labels masked
-            samples.
+        sample_selector (bool array, optional): Data mask where False labels
+            masked samples.
         verbosity (int, optional): Level of verbosity.
 
     Returns:
@@ -646,8 +652,8 @@ def _pc_algo(data, j,
                 # Calculate lag function
                 lag_func = _calculate_lag_function(
                     measure=measure, data=data,
-                    data_mask=data_mask,
-                    mask=mask, mask_type=mask_type,
+                    sample_selector=sample_selector,
+                    selector=selector, selector_type=selector_type,
                     var_x=i, var_y=j, selected_lags=lag,
                     conds_x=[], conds_y=conds_y,
                     tau_max=tau_max,
@@ -741,8 +747,8 @@ def _pc_algo(data, j,
 
             nodes_and_estimates[(i, tau)] = abs(_calculate_lag_function(
                 measure=measure, data=data,
-                data_mask=data_mask,
-                mask=mask, mask_type=mask_type,
+                sample_selector=sample_selector,
+                selector=selector, selector_type=selector_type,
                 var_x=i, var_y=j, selected_lags=[-tau],
                 conds_x=[], conds_y=conds_y,
                 tau_max=tau_max,
@@ -833,14 +839,14 @@ def _get_conditions(parents_neighbors, i, j,
 
 def get_lagfunctions(data, selected_variables=None, parents_neighbors=None,
                      cond_mode='none',
-                     solid_contemp_links=True,
+                     solid_contemp_links=False,
                      tau_max=1, max_conds=4,
                      measure='par_corr',
                      measure_params=None,
                      significance='analytic', sig_lev=0.95, sig_samples=100,
                      fixed_thres=0.015,
                      confidence=False, conf_lev=0.95, conf_samples=100,
-                     mask=False, mask_type=None, data_mask=None,
+                     selector=False, selector_type=None, sample_selector=None,
                      verbosity=0
                      ):
     """Function that returns lag functions for all pairs (i, j).
@@ -867,12 +873,12 @@ def get_lagfunctions(data, selected_variables=None, parents_neighbors=None,
         sig_samples (int, optional): Number of samples for shuffle significance
             test.
         fixed_thres (float, optional): Fixed significance threshold.
-        mask (bool, optional): Whether to use masked data.
-        mask_type (list, optional): Can be ['x', 'y', 'z'] or either of these
-            strings to mark for which variables in the dependence measure
+        selector (bool, optional): Whether to use masked data.
+        selector_type (list, optional): Can be ['x', 'y', 'z'] or either of
+            these strings to mark for which variables in the dependence measure
             I(X; Y | Z) the samples should be masked.
-        data_mask (bool array, optional): Data mask where False labels masked
-            samples.
+        sample_selector (bool array, optional): Data mask where False labels
+            masked samples.
         confidence (bool or string, optional): Type of confidence test,
             either False or 'analytic' or 'bootstrap'.
         conf_lev (float, optional): Two-sided confidence level (eg, 0.9).
@@ -894,7 +900,8 @@ def get_lagfunctions(data, selected_variables=None, parents_neighbors=None,
                    significance=significance, sig_lev=sig_lev,
                    sig_samples=sig_samples,
                    fixed_thres=fixed_thres,
-                   mask=mask, mask_type=mask_type, data_mask=data_mask,
+                   selector=selector, selector_type=selector_type,
+                   sample_selector=sample_selector,
                    selected_variables=selected_variables,
                    parents_neighbors=parents_neighbors,
                    cond_mode=cond_mode,
@@ -937,8 +944,8 @@ def get_lagfunctions(data, selected_variables=None, parents_neighbors=None,
             lag_func = _calculate_lag_function(
                 measure=measure,
                 data=data,
-                data_mask=data_mask,
-                mask=mask, mask_type=mask_type,
+                sample_selector=sample_selector,
+                selector=selector, selector_type=selector_type,
                 var_x=i, var_y=j, selected_lags=None,
                 conds_x=conds_x, conds_y=conds_y,
                 tau_max=tau_max_here,
@@ -957,8 +964,8 @@ def get_lagfunctions(data, selected_variables=None, parents_neighbors=None,
 
         return lagfunc_slice, sig_thres_slice, conf_slice
 
-    lagfuncs = numpy.zeros((N,  N, tau_max + 1))
-    sig_thres = numpy.zeros((N,  N, tau_max + 1))
+    lagfuncs = numpy.zeros((N, N, tau_max + 1))
+    sig_thres = numpy.zeros((N, N, tau_max + 1))
     confs = numpy.zeros((N, N, tau_max + 1, 2))
 
     for j in selected_variables:
@@ -979,9 +986,9 @@ def get_lagfunctions(data, selected_variables=None, parents_neighbors=None,
 ##
 # Helper functions
 ##
-def _calculate_lag_function(measure, data, data_mask=None,
-                            mask=False,
-                            mask_type=None, min_samples=20,
+def _calculate_lag_function(measure, data, sample_selector=None,
+                            selector=False,
+                            selector_type=None, min_samples=20,
                             var_x=0, var_y=1, conds_x=None, conds_y=None,
                             measure_params=None,
                             tau_max=0,
@@ -997,10 +1004,10 @@ def _calculate_lag_function(measure, data, data_mask=None,
         measure (str, optional): Measure of dependence, currently 'par_corr',
             'reg', 'cmi_knn', 'cmi_symb', 'cmi_gauss' are supported.
         data (array, optional): Data array of shape (time, variables).
-        data_mask (bool array, optional): Data mask where False labels masked
-            samples.
-        mask_type (list, optional): Can be ['x', 'y', 'z'] or either of these
-            strings to mark for which variables in the dependence measure
+        sample_selector (bool array, optional): Data mask where False labels
+            masked samples.
+        selector_type (list, optional): Can be ['x', 'y', 'z'] or either of
+            these strings to mark for which variables in the dependence measure
             I(X; Y | Z) the samples should be masked.
         min_samples (int, optional): Minimum number of samples to accept,
             otherwise NaNs are returned.
@@ -1066,9 +1073,9 @@ def _calculate_lag_function(measure, data, data_mask=None,
             X=X, Y=Y, Z=Z,
             tau_max=tau_max,
             data=data,
-            mask=mask,
-            data_mask=data_mask,
-            mask_type=mask_type,
+            selector=selector,
+            sample_selector=sample_selector,
+            selector_type=selector_type,
             verbosity=verbosity)
 
         dim, T_eff = array.shape
@@ -1118,8 +1125,8 @@ def _calculate_lag_function(measure, data, data_mask=None,
             'cmi_conf': cmi_conf, 'cmi_pval': cmi_pval}
 
 
-def _construct_array(X, Y, Z, tau_max, data, mask=False,
-                     data_mask=None, mask_type=None,
+def _construct_array(X, Y, Z, tau_max, data, selector=False,
+                     sample_selector=None, selector_type=None,
                      verbosity=0):
     """Returns array of shape (dim, T) containing and XYZ identifier.
 
@@ -1132,12 +1139,12 @@ def _construct_array(X, Y, Z, tau_max, data, mask=False,
             I(X; Y | Z).
         tau_max (int, optional): Maximum time delay.
         data (array, optional): Data array of shape (time, variables).
-        mask (bool, optional): Whether to use masked data.
-        mask_type (list, optional): Can be ['x', 'y', 'z'] or either of these
-            strings to mark for which variables in the dependence measure
+        selector (bool, optional): Whether to use masked data.
+        selector_type (list, optional): Can be ['x', 'y', 'z'] or either of
+            these strings to mark for which variables in the dependence measure
             I(X; Y | Z) the samples should be masked.
-        data_mask (bool array, optional): Data mask where False labels masked
-            samples.
+        sample_selector (bool array, optional): Data mask where False labels
+            masked samples.
         verbosity (int, optional): Level of verbosity.
 
     Returns:
@@ -1159,8 +1166,8 @@ def _construct_array(X, Y, Z, tau_max, data, mask=False,
 
     data_type = data.dtype
 
-    if mask_type is None:
-        mask_type = ['x', 'y', 'z']
+    if selector_type is None:
+        selector_type = ['x', 'y', 'z']
 
     T, N = data.shape
 
@@ -1207,21 +1214,21 @@ def _construct_array(X, Y, Z, tau_max, data, mask=False,
         var, lag = node
         array[i, :] = data[max_lag + lag: T + lag, var]
 
-    if mask:
-        # Remove samples with data_mask == 0
-        # conditional on which mask_type is used
-        array_mask = numpy.zeros((dim, T - max_lag), dtype='int32')
+    if selector:
+        # Remove samples with sample_selector == 0
+        # conditional on which selector_type is used
+        array_selector = numpy.zeros((dim, T - max_lag), dtype='int32')
         for i, node in enumerate(XYZ):
             var, lag = node
-            array_mask[i, :] = data_mask[max_lag + lag: T + lag, var]
+            array_selector[i, :] = sample_selector[max_lag + lag: T + lag, var]
 
         use_indices = numpy.ones(T - max_lag, dtype='int')
-        if 'x' in mask_type:
-            use_indices *= numpy.prod(array_mask[xyz == 0, :], axis=0)
-        if 'y' in mask_type:
-            use_indices *= numpy.prod(array_mask[xyz == 1, :], axis=0)
-        if 'z' in mask_type:
-            use_indices *= numpy.prod(array_mask[xyz == 2, :], axis=0)
+        if 'x' in selector_type:
+            use_indices *= numpy.prod(array_selector[xyz == 0, :], axis=0)
+        if 'y' in selector_type:
+            use_indices *= numpy.prod(array_selector[xyz == 1, :], axis=0)
+        if 'z' in selector_type:
+            use_indices *= numpy.prod(array_selector[xyz == 2, :], axis=0)
         array = array[:, use_indices == 1]
 
     if verbosity > 2:
@@ -1230,9 +1237,9 @@ def _construct_array(X, Y, Z, tau_max, data, mask=False,
               "            X = %s\n" % str(X) +
               "            Y = %s\n" % str(Y) +
               "            Z = %s" % str(Z))
-        if mask:
+        if selector:
             print("            with masked samples in "
-                  "%s removed" % str(mask_type))
+                  "%s removed" % str(selector_type))
 
     return array, xyz
 
