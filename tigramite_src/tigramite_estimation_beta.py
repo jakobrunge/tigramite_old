@@ -48,7 +48,7 @@ from scipy import linalg, special, stats, spatial
 try:
     from scipy import weave
 except ImportError:
-    import weave
+    from scipy import weave
     print("Warning: Could not import scipy.weave, cmi_knn estimator and some "
           " other functions not working!")
 
