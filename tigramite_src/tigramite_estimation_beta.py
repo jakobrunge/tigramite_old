@@ -42,7 +42,15 @@ Module contains functions for the package tigramite.
 import numpy
 
 #  Import scipy.weave for C++ inline code and other packages
-from scipy import weave, linalg, special, stats, spatial
+from scipy import linalg, special, stats, spatial
+
+#  Import scipy.weave for C++ inline code and other packages
+try:
+    from scipy import weave
+except ImportError:
+    import weave
+    print("Warning: Could not import scipy.weave, cmi_knn estimator and some "
+          " other functions not working!")
 
 #  Additional imports
 import itertools
@@ -55,7 +63,7 @@ __docformat__ = "epytext en"
 def _sanity_checks(which='pc_algo',
                    data=None, estimate_parents_neighbors='both',
                    tau_min=0, tau_max=5,
-                   initial_conds=2, max_conds=6, max_trials=5,
+                   initial_conds=1, max_conds=6, max_trials=5,
                    measure='par_corr', measure_params=None,
                    significance='analytic', sig_lev=0.975, sig_samples=100,
                    fixed_thres=0.015,
@@ -161,6 +169,9 @@ def _sanity_checks(which='pc_algo',
             raise ValueError("selector_type = %s, but must be list containing"
                              % selector_type + " 'x','y','z', or any "
                              "combination")
+        if sample_selector is None:
+            raise ValueError("sample_selector must be array of same shape"
+                             " as fulldata.")
         if data.shape != sample_selector.shape:
             raise ValueError("shape mismatch: data.shape = %s"
                              % str(data.shape) +
@@ -255,7 +266,7 @@ def _sanity_checks(which='pc_algo',
 
 def pc_algo_all(data, estimate_parents_neighbors='both',
                 tau_min=0, tau_max=5,
-                initial_conds=2, max_conds=6, max_trials=5,
+                initial_conds=1, max_conds=6, max_trials=5,
                 measure='par_corr', measure_params=None,
                 significance='analytic', sig_lev=0.975, sig_samples=100,
                 fixed_thres=0.015,
@@ -715,15 +726,15 @@ def _pc_algo(data, j,
 
         if conds_dim >= len(sorted_nodes) and len(sorted_nodes) > 1:
             if verbosity > 1:
-                print("\n    Check whether also condition sets smaller than "
-                      "remaining parents have been used...")
+                print("\n    Check convergence...")
             convergence = conditions.check_convergence(
                 dim=len(sorted_nodes) - 1)
             if convergence:
                 break
             else:
                 if verbosity > 1:
-                    print("\n    Yes --> returning to dim = len(nodes)-1")
+                    print("\n    Some combinations left -->"
+                          " returning to dim = len(nodes)-1")
                 conds_dim = len(sorted_nodes) - 1
 
     if verbosity > 1:
@@ -732,7 +743,7 @@ def _pc_algo(data, j,
     if len(sorted_nodes) > 1:
 
         if verbosity > 1:
-            print("\n    Now sorting nodes by ITY...")
+            print("\n    Now sorting nodes...")
 
         for (i, tau) in sorted_nodes:
             # print (i, tau), nodes_and_estimates[(i, tau)],
