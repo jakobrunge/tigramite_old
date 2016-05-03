@@ -1400,7 +1400,7 @@ def _get_estimate(array, measure, xyz, measure_params,
                                           measure_params=measure_params,
                                           verbosity=verbosity)
 
-            pval = (null_dist >= val).mean()
+            pval = (null_dist >= numpy.abs(val)).mean()
             sig_thres = null_dist[sig_lev * sig_samples]
 
         elif significance == 'fixed':
