@@ -43,7 +43,7 @@ doi:10.1175/JCLI-D-13-00159.1
 ## Required python packages
 
 - numpy, tested with Version 1.10
-- scipy, tested with Version 0.16
+- scipy, tested with Version 0.17
 - matplotlib, tested with Version 1.5
 - networkx, tested with Version 1.10
 - basemap (only if plotting on a map is needed)
