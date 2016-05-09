@@ -44,9 +44,6 @@ import numpy
 #  Import other packages
 from scipy import linalg, special, stats, spatial
 
-# Import cython code
-import tigramite_cython_code
-
 #  Additional imports
 import itertools
 import warnings
@@ -1759,6 +1756,13 @@ def _get_nearest_neighbors(array, xyz, k, standardize=True):
     Raises:
         ValueError: Description
     """
+
+    # Import cython code
+    try:
+        import tigramite_cython_code
+    except ImportError:
+        raise ImportError("Could not import tigramite_cython_code, please"
+                          " compile cython code first as described in Readme.")
 
     dim, T = array.shape
 

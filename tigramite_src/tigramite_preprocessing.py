@@ -228,7 +228,11 @@ def ordinal_patt_array(array, array_mask, dim=2, step=1, verbosity=0):
     from scipy.misc import factorial
 
     # Import cython code
-    import tigramite_cython_code
+    try:
+        import tigramite_cython_code
+    except ImportError:
+        raise ImportError("Could not import tigramite_cython_code, please"
+                          " compile cython code first as described in Readme.")
 
     array = array.astype('float64')
     patt_time = int(array.shape[0] - step * (dim - 1))
