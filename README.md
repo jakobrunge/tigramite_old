@@ -18,7 +18,7 @@ Tigramite is a time series analysis python module. With flexibly adaptable scrip
 
 - Different (conditional) measures of association (partial correlation, standardized regression, and conditional mutual information with different estimators)
 
-- Fast computation through use of C-code via scipy.weave; also fully parallelized script (mpi4py package necessary) available
+- Fast computation through use of Cython; also fully parallelized script (mpi4py package necessary) available
 
 - Significance testing via analytical tests or a shuffle test for conditional mutual information
 

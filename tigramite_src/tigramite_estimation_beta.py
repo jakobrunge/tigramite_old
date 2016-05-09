@@ -41,16 +41,11 @@ Module contains functions for the package tigramite.
 #  Import NumPy for the array object and fast numerics
 import numpy
 
-#  Import scipy.weave for C++ inline code and other packages
+#  Import other packages
 from scipy import linalg, special, stats, spatial
 
-#  Import scipy.weave for C++ inline code and other packages
-try:
-    from scipy import weave
-except ImportError:
-    import weave
-    print("Warning: Could not import scipy.weave, cmi_knn estimator and some "
-          " other functions not working!")
+# Import cython code
+import tigramite_cython_code
 
 #  Additional imports
 import itertools
@@ -1769,7 +1764,7 @@ def _get_nearest_neighbors(array, xyz, k, standardize=True):
 
     if standardize:
         # Standardize
-        array = array.astype('float32')
+        array = array.astype('float')
         array -= array.mean(axis=1).reshape(dim, 1)
         array /= array.std(axis=1).reshape(dim, 1)
         # FIXME: If the time series is constant, return nan rather than raising
@@ -1779,89 +1774,21 @@ def _get_nearest_neighbors(array, xyz, k, standardize=True):
                              "possibly constant array!")
 
     # Add noise to destroy ties...
-    array += ((1E-6 * array.std(axis=1).reshape(dim, 1) *
-               numpy.random.rand(array.shape[0], array.shape[1])))
+    array += (1E-6 * array.std(axis=1).reshape(dim, 1)
+              * numpy.random.rand(array.shape[0], array.shape[1]))
 
-    # Use cKDTree to get distances eps to the k-th nearest neighbors
-    # for every sample in joint space XYZ with maximum norm
+    # Use cKDTree to get distances eps to the k-th nearest neighbors for every sample
+    # in joint space XYZ with maximum norm
     tree_xyz = spatial.cKDTree(array.T)
-    epsarray = tree_xyz.query(array.T, k=k + 1, p=numpy.inf, eps=0.
-                              )[0][:, k].astype('float32')
+    epsarray = tree_xyz.query(array.T, k=k+1, p=numpy.inf, eps=0.)[0][:,k].astype('float')
 
-    # Prepare for fast weave.inline access
-    array = array.flatten()
+    # Prepare for fast cython access
 
     dim_x = int(numpy.where(xyz == 0)[0][-1] + 1)
     dim_y = int(numpy.where(xyz == 1)[0][-1] + 1 - dim_x)
 
-    # Initialize for weave access
-    k_xz = numpy.zeros(T, dtype='int32')
-    k_yz = numpy.zeros(T, dtype='int32')
-    k_z = numpy.zeros(T, dtype='int32')
-
-    code = """
-    int i, j, index=0, t, m, n, d, kxz, kyz, kz;
-    double  dz=0., dxyz=0., dx=0., dy=0., dis, eps, epsmax;
-
-    // Loop over time points
-    for(i = 0; i < T; i++){
-
-        // Epsilon of k-th nearest neighbor in joint space
-        epsmax = epsarray[i];
-        //printf("%.5f ", epsmax);
-
-        // Count neighbors within epsmax in subspaces, since the reference
-        // point is included, all neighbors are at least 1
-        kz = 0;
-        kxz = 0;
-        kyz = 0;
-        for(j = 0; j < T; j++){
-
-            // Z-subspace, if empty, dz stays 0
-            dz = 0.;
-            for(d = dim_x+dim_y; d < dim ; d++){
-                dz = fmax( fabs(array[d*T + i] - array[d*T + j]), dz);
-            }
-
-            // For no conditions, kz is counted up to T
-            if (dz < epsmax){
-                kz += 1;
-
-                // Only now check Y- and X-subspaces
-
-                // Y-subspace, the loop is only entered for dim_y > 1
-                dy = fabs(array[dim_x*T + i] - array[dim_x*T + j]);
-                for(d = dim_x+1; d < dim_x+dim_y; d++){
-                    dy = fmax( fabs(array[d*T + i] - array[d*T + j]), dy);
-                }
-                if (dy < epsmax){
-                    kyz += 1;
-                }
-
-                // X-subspace, the loop is only entered for dim_x > 1
-                dx = fabs(array[0*T + i] - array[0*T + j]);
-                for(d = 1; d < dim_x; d++){
-                    dx = fmax( fabs(array[d*T + i] - array[d*T + j]), dx);
-                }
-                if (dx < epsmax){
-                    kxz += 1;
-                }
-
-            }
-        }
-        // Write to numpy arrays
-        k_xz[i] = kxz;
-        k_yz[i] = kyz;
-        k_z[i] = kz;
-
-    }
-    """
-
-    vars = ['array', 'T', 'dim_x', 'dim_y', 'epsarray',
-            'k', 'dim', 'k_xz', 'k_yz', 'k_z']
-
-    weave.inline(
-        code, vars, headers=["<math.h>"], extra_compile_args=['-O3'])
+    k_xz, k_yz, k_z = tigramite_cython_code._get_neighbors_within_eps_cython(array, T, dim_x, dim_y, epsarray,
+            k, dim)
 
     return k_xz, k_yz, k_z
 
@@ -1968,7 +1895,7 @@ def _plogp_vector(T, grass=False):
         Vectorized p*log(p) function.
     """
 
-    gfunc = numpy.zeros(T + 1, dtype='float32')
+    gfunc = numpy.zeros(T + 1, dtype='float')
 
     if grass:
         gfunc = numpy.zeros(T + 1)

@@ -349,7 +349,7 @@ def test_measures():
                     1: [((1, -1), ay), ((0, -1), cxy)],
                     }
     numpy.random.seed(42)
-    data, links = pp.var_process(links_coeffs, T=5000,
+    data, links = pp.var_process(links_coeffs, T=10000,
                                  use='inno_cov', verbosity=verbosity)
     T, N = data.shape
 
@@ -385,7 +385,7 @@ def test_measures():
             numpy.testing.assert_allclose(res[1], expected_cmi, rtol=0.1)
 
     # binning estimator
-    symb_data = pp.quantile_bin_array(data, bins=5)
+    symb_data = pp.quantile_bin_array(data, bins=6)
     res = te._calculate_lag_function(
         measure='cmi_symb',
         data=symb_data,

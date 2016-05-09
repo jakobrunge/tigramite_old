@@ -175,18 +175,18 @@ def time_bin_with_mask(data, time_bin_length, sample_selector=None):
         Tuple of time-binned data array and new length of array.
     """
 
-    n_time = len(data)
+    T = len(data)
 
     if sample_selector is None:
         sample_selector = numpy.ones(data.shape)
 
     if numpy.ndim(data) == 1.:
-        data.shape = (n_time, 1)
-        sample_selector.shape = (n_time, 1)
+        data.shape = (T, 1)
+        sample_selector.shape = (T, 1)
 
     bindata = numpy.zeros(
-        (n_time / time_bin_length,) + data.shape[1:], dtype="float32")
-    for index, i in enumerate(range(0, n_time - time_bin_length + 1,
+        (T / time_bin_length,) + data.shape[1:], dtype="float32")
+    for index, i in enumerate(range(0, T - time_bin_length + 1,
                                     time_bin_length)):
         # print weighted_avg_and_std(fulldata[i:i+time_bin_length], axis=0,
         # weights=sample_selector[i:i+time_bin_length])[0]
@@ -195,9 +195,9 @@ def time_bin_with_mask(data, time_bin_length, sample_selector=None):
                                               weights=sample_selector[i:i +
                                               time_bin_length])[0]
 
-    n_time, grid_size = bindata.shape
+    T, grid_size = bindata.shape
 
-    return (bindata.squeeze(), n_time)
+    return (bindata.squeeze(), T)
 
 
 def ordinal_patt_array(array, array_mask, dim=2, step=1, verbosity=0):
@@ -227,54 +227,27 @@ def ordinal_patt_array(array, array_mask, dim=2, step=1, verbosity=0):
     import scipy
     from scipy.misc import factorial
 
+    # Import cython code
+    import tigramite_cython_code
+
+    array = array.astype('float64')
     patt_time = int(array.shape[0] - step * (dim - 1))
-    n_time, nodes = array.shape
+    T, N = array.shape
 
     if dim <= 1 or patt_time <= 0:
         raise ValueError("Dim mist be > 1 and length of delay vector smaller "
                          "array length.")
 
-    patt = numpy.zeros((patt_time, nodes), dtype='int32')
-    patt_mask = numpy.zeros((patt_time, nodes), dtype='int32')
+    patt = numpy.zeros((patt_time, N), dtype='int32')
+    patt_mask = numpy.zeros((patt_time, N), dtype='int32')
     fac = factorial(numpy.arange(10)).astype('int32')
 
-    code = r"""
-        int n,t,k,i,j,p,tau,start,mask;
-        double v[dim];
+    (patt, patt_mask) = tigramite_cython_code._get_patterns_cython(
+        array, array_mask, patt, patt_mask, dim, step, fac, N, 
+        T)
 
-        start = step*(dim-1);
-        for(n = 0; n < nodes; n++){
-            for(t = start; t < n_time; t++){
-                mask = 1;
-                for(k = 0; k < dim; k++){
-                    tau = k*step;
-                    v[k] = array(t - tau, n);
-                    mask *= array_mask(t - tau, n);
-                }
-                if( v[0] < v[1]){
-                    p = 1;
-                }
-                else{
-                    p = 0;
-                }
-                for (i = 2; i < dim; i++){
-                    for (j = 0; j < i; j++){
-                        if( v[j] < v[i]){
-                            p += fac(i);
-                        }
-                    }
-                }
-                patt(t-start, n) = p;
-                patt_mask(t-start, n) = mask;
-            }
-        }
-    """
-    vars = ['array', 'array_mask', 'patt', 'patt_mask',
-            'dim', 'step', 'fac', 'nodes', 'n_time']
-
-    scipy.weave.inline(code, vars,
-                       type_converters=scipy.weave.converters.blitz,
-                       extra_compile_args=["-O3"])
+    patt = numpy.asarray(patt)
+    patt_mask = numpy.asarray(patt_mask)
 
     return (patt, patt_mask, patt_time)
 
