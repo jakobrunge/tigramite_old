@@ -75,8 +75,8 @@ $ python tigramite_analysis_template_beta.py
 
 The results pickle file and figures will be saved in the specified folder.
 
-Some functions make use of fast cython functions (in the file "tigramite_cython_code.pyx"). I included the compiled tigramite_cython_code.c file and also the setup file which can be run with
+Some functions make use of fast cython functions (in the file "tigramite_cython_code.pyx"). I included the compiled tigramite_cython_code.c and *.so files (for unix systems) and also the setup file which can be run with
 
 python setup_tigramite_cython_code.py build_ext --inplace
 
-to compile the code.
+to compile the code in your system.

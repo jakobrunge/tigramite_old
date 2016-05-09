@@ -4,7 +4,6 @@ import cython
 from libc.math cimport abs
 
 cdef inline double max(double a, double b): return a if a >= b else b
-#cdef inline double abs(double a): return a if a >= 0  else -a
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -71,6 +70,7 @@ def _get_neighbors_within_eps_cython(
 
 
     return k_xz, k_yz, k_z
+
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
