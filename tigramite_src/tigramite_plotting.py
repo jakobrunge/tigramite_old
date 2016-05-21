@@ -598,7 +598,7 @@ def draw_network_with_curved_edges(
     cmap_links='YlOrRd', cmap_links_edges='YlOrRd', links_vmin=0.,
     links_vmax=1., links_edges_vmin=0., links_edges_vmax=1.,
     links_ticks=.2, links_edges_ticks=.2, link_label_fontsize=8,
-    arrowstyle='-|>', arrowhead_size=3., curved_radius=.2, label_fontsize=4,
+    arrowstyle='simple', arrowhead_size=3., curved_radius=.2, label_fontsize=4,
     label_fraction=.5, link_colorbar_label='link',
     link_edge_colorbar_label='link_edge',
     undirected_curved=False, undirected_style='solid',
@@ -622,7 +622,7 @@ def draw_network_with_curved_edges(
 
     N = len(G)
 
-    def draw_edge(ax, u, v, d, seen, directed=True):
+    def draw_edge(ax, u, v, d, seen, arrowstyle='simple', directed=True):
 
         n1 = G.node[u]['patch']
         n2 = G.node[v]['patch']
@@ -634,18 +634,24 @@ def draw_network_with_curved_edges(
             if cmap_links is not None:
                 facecolor = data_to_rgb_links.to_rgba(d['directed_color'])
             else:
-                facecolor = standard_color
+                if d['directed_color'] is not None:
+                    facecolor = d['directed_color']
+                else:
+                    facecolor = standard_color
             if d['directed_edgecolor'] is not None:
                 edgecolor = data_to_rgb_links_edges.to_rgba(
                     d['directed_edgecolor'])
             else:
-                edgecolor = standard_color
+                if d['directed_edgecolor'] is not None:
+                    edgecolor = d['directed_edgecolor']
+                else:
+                    edgecolor = standard_color
             width = d['directed_width']
             alpha = d['directed_alpha']
-            arrowstyle = '-|>'
             if (u, v) in seen:
                 rad = seen.get((u, v))
                 rad = (rad + numpy.sign(rad) * 0.1) * -1.
+            arrowstyle = arrowstyle
             link_edge = d['directed_edge']
             linestyle = 'solid'
         else:
@@ -653,12 +659,18 @@ def draw_network_with_curved_edges(
             if cmap_links is not None:
                 facecolor = data_to_rgb_links.to_rgba(d['undirected_color'])
             else:
-                facecolor = standard_color
+                if d['undirected_color'] is not None:
+                    facecolor = d['undirected_color']
+                else:
+                    facecolor = standard_color
             if d['undirected_edgecolor'] is not None:
                 edgecolor = data_to_rgb_links_edges.to_rgba(
                     d['undirected_edgecolor'])
             else:
-                edgecolor = standard_color
+                if d['undirected_edgecolor'] is not None:
+                    edgecolor = d['undirected_edgecolor']
+                else:
+                    edgecolor = standard_color
             width = d['undirected_width']
             alpha = d['undirected_alpha']
             arrowstyle = '-'
@@ -671,23 +683,25 @@ def draw_network_with_curved_edges(
             e = FancyArrowPatch(n1.center, n2.center,  # patchA=n1,patchB=n2,
                                 arrowstyle=arrowstyle,
                                 connectionstyle='arc3,rad=%s' % rad,
-                                mutation_scale=arrowhead_size,
-                                lw=3 * width,
+                                mutation_scale=3 * width,
+                                lw=0.,
                                 alpha=alpha,
                                 color=edgecolor,
                                 #                                zorder = -1,
-                                clip_on=False)
+                                clip_on=False,
+                                patchA=n1, patchB=n2)
+
             ax.add_patch(e)
         # Inner arrow
         e = FancyArrowPatch(n1.center, n2.center,  # patchA=n1,patchB=n2,
                             arrowstyle=arrowstyle,
                             connectionstyle='arc3,rad=%s' % rad,
-                            mutation_scale=arrowhead_size,
-                            lw=width,
+                            mutation_scale=width,
+                            lw=0.,
                             alpha=alpha,
-                            linestyle=linestyle,
                             color=facecolor,
-                            clip_on=False)
+                            clip_on=False,
+                            patchA=n1, patchB=n2)
         ax.add_patch(e)
 
         if d['label'] is not None and directed:
@@ -696,24 +710,24 @@ def draw_network_with_curved_edges(
             path = e.get_path()
             verts = path.to_polygons(trans)[0]
             if len(verts) > 2:
-                label_vert = verts[(1. - label_fraction) * len(verts), :]
+                label_vert = verts[1, :]
                 l = d['label']
                 string = str(l)
                 ax.text(label_vert[0], label_vert[1], string,
                         fontsize=link_label_fontsize,
                         verticalalignment='center',
-                        horizontalalignment='center')
+                        horizontalalignment='center')      
 
         return rad
 
     # Fix lower left and upper right corner (networkx unfortunately rescales
     # the positions...)
-    c = Circle((0, 0), radius=.01, alpha=1., fill=False,
-               linewidth=0., transform=fig.transFigure)
-    ax.add_patch(c)
-    c = Circle((1, 1), radius=.01, alpha=1., fill=False,
-               linewidth=0., transform=fig.transFigure)
-    ax.add_patch(c)
+    # c = Circle((0, 0), radius=.01, alpha=1., fill=False,
+    #            linewidth=0., transform=fig.transFigure)
+    # ax.add_patch(c)
+    # c = Circle((1, 1), radius=.01, alpha=1., fill=False,
+    #            linewidth=0., transform=fig.transFigure)
+    # ax.add_patch(c)
 
     ##
     # Draw nodes
@@ -762,9 +776,9 @@ def draw_network_with_curved_edges(
                 # ax.figbox.bounds[1]+0.05, 0.025, 0.35], frameon=False) #
                 # setup colorbar axes.
                 # setup colorbar axes.
-                cax_n = pyplot.axes([0.1, ax.figbox.bounds[1] + 0.02 +
+                cax_n = pyplot.axes([0.05, ax.figbox.bounds[1] + 0.02 +
                                      ring * 0.11,
-                                     0.25, 0.025 +
+                                     0.4, 0.025 +
                                      (len(node_rings.keys()) == 1) * 0.035],
                                     frameon=False)
                 cb_n = pyplot.colorbar(
@@ -835,7 +849,8 @@ def draw_network_with_curved_edges(
     # First draw small circles as anchorpoints of the curved edges
     for n in G:
         # , transform = ax.transAxes)
-        c = Circle(pos[n], radius=10., alpha=0., fill=False, linewidth=0.)
+        size = standard_size*.3
+        c = Circle(pos[n], radius=size, alpha=0., fill=False, linewidth=0.)
         ax.add_patch(c)
         G.node[n]['patch'] = c
 
@@ -866,7 +881,7 @@ def draw_network_with_curved_edges(
 # cax_e = pyplot.axes([.8, ax.figbox.bounds[1]+0.5, 0.025, 0.35],
 # frameon=False) # setup colorbar axes.
         # setup colorbar axes.
-        cax_e = pyplot.axes([0.55, ax.figbox.bounds[1] + 0.02, 0.3, 0.025 +
+        cax_e = pyplot.axes([0.55, ax.figbox.bounds[1] + 0.02, 0.4, 0.025 +
                              (len(all_links_edge_weights) == 0) * 0.035],
                             frameon=False)
 
@@ -901,7 +916,7 @@ def draw_network_with_curved_edges(
 # frameon=False) # setup colorbar axes.
         # setup colorbar axes.
         cax_e = pyplot.axes(
-            [0.55, ax.figbox.bounds[1] + 0.05 + 0.1, 0.25, 0.025],
+            [0.55, ax.figbox.bounds[1] + 0.05 + 0.1, 0.4, 0.025],
             frameon=False)
 
         cb_e = pyplot.colorbar(
@@ -925,7 +940,7 @@ def draw_network_with_curved_edges(
     for (u, v, d) in G.edges(data=True):
         if u != v:
             if d['directed']:
-                seen[(u, v)] = draw_edge(ax, u, v, d, seen, directed=True)
+                seen[(u, v)] = draw_edge(ax, u, v, d, seen, arrowstyle, directed=True)
             if d['undirected'] and (v, u) not in seen:
                 seen[(u, v)] = draw_edge(ax, u, v, d, seen, directed=False)
 
@@ -937,7 +952,7 @@ def plot_graph(lagfuncs, sig_thres, var_names, fig, ax,
                link_width=None,
                node_pos=None,
                undirected_style='solid',
-               arrow_linewidth=5.,
+               arrow_linewidth=30.,
                vmin_edges=-1,
                vmax_edges=1.,
                edge_ticks=.4,
@@ -950,6 +965,7 @@ def plot_graph(lagfuncs, sig_thres, var_names, fig, ax,
                arrowhead_size=20,
                curved_radius=.2,
                label_fontsize=10,
+               label_fraction=0.5,
                alpha=1.,
                node_label_size=10,
                link_label_fontsize=6,
@@ -960,7 +976,6 @@ def plot_graph(lagfuncs, sig_thres, var_names, fig, ax,
     otherwise please look at the code.
     """
     import networkx
-
     if rescale_cmi:
         print("Rescaling CMI (and sig_thres) to partial correlation "
               "scale [0, 1]")
@@ -1092,9 +1107,9 @@ def plot_graph(lagfuncs, sig_thres, var_names, fig, ax,
         cmap_links_edges='YlOrRd', links_edges_vmin=-1., links_edges_vmax=1.,
         links_edges_ticks=.2, link_edge_colorbar_label='link_edge',
 
-        arrowstyle='-|>', arrowhead_size=arrowhead_size,
+        arrowstyle='simple', arrowhead_size=arrowhead_size,
         curved_radius=curved_radius, label_fontsize=label_fontsize,
-        link_label_fontsize=link_label_fontsize, label_fraction=.5,
+        link_label_fontsize=link_label_fontsize, label_fraction=label_fraction,
         link_colorbar_label=link_colorbar_label,
         undirected_style=undirected_style)
 
@@ -1107,7 +1122,7 @@ def plot_time_series_graph(lagfuncs, sig_thres, var_names, fig, ax,
                            link_colorbar_label='',
                            rescale_cmi=False,
                            link_width=None,
-                           arrow_linewidth=5.,
+                           arrow_linewidth=20.,
                            vmin_edges=-1,
                            vmax_edges=1.,
                            edge_ticks=.4,
@@ -1264,7 +1279,7 @@ def plot_time_series_graph(lagfuncs, sig_thres, var_names, fig, ax,
         cmap_links_edges='YlOrRd', links_edges_vmin=-1., links_edges_vmax=1.,
         links_edges_ticks=.2, link_edge_colorbar_label='link_edge',
 
-        arrowstyle='-|>', arrowhead_size=arrowhead_size,
+        arrowstyle='simple', arrowhead_size=arrowhead_size,
         curved_radius=curved_radius, label_fontsize=label_fontsize,
         label_fraction=.5,
         link_colorbar_label=link_colorbar_label, undirected_curved=True,

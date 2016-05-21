@@ -516,7 +516,7 @@ if plot_graph:
             cmap_nodes='OrRd',
 
             link_label_fontsize=8,
-            arrow_linewidth=5.,
+            arrow_linewidth=30.,
             arrowhead_size=20,
             curved_radius=.2,
             vmin_edges=-1,
@@ -563,7 +563,7 @@ if plot_time_series_graph:
             # '_%s_TSG.%s' % (which, save_fig_format),
             rescale_cmi=False,
             link_width=None,
-            arrow_linewidth=2.,
+            arrow_linewidth=10.,
             vmin_edges=-1,
             vmax_edges=1.,
             edge_ticks=.4,

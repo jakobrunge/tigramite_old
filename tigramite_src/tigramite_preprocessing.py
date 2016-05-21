@@ -269,7 +269,7 @@ def quantile_bin_array(data, bins=6):
     T, N = data.shape
 
     # get the bin quantile steps
-    bin_edge = numpy.ceil(T / float(bins))
+    bin_edge = int(numpy.ceil(T / float(bins)))
 
     symb_array = numpy.zeros((T, N), dtype='int32')
 

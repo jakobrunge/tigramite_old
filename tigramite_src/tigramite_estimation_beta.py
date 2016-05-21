@@ -669,14 +669,14 @@ def _pc_algo(data, j,
                 cmi = lag_func['cmi'][lag]
                 sig_thres = lag_func['cmi_sig'][lag]
 
-                if numpy.abs(cmi) < sig_thres:
+                if my_abs(cmi, measure) < sig_thres:
                     # Remove node
                     del nodes_and_estimates[(i, tau)]
                     sorted_nodes.remove((i, tau))
                 else:
                     # Take minimum estimate among all previous CMIs
                     nodes_and_estimates[(i, tau)] = min(
-                        numpy.abs(cmi),
+                        my_abs(cmi, measure),
                         nodes_and_estimates[(i, tau)])
 
             # Sort parents, strongest are checked as conditions first
@@ -1392,8 +1392,8 @@ def _get_estimate(array, measure, xyz, measure_params,
                                           measure_params=measure_params,
                                           verbosity=verbosity)
 
-            pval = (null_dist >= numpy.abs(val)).mean()
-            sig_thres = null_dist[sig_lev * sig_samples]
+            pval = (null_dist >= my_abs(val, measure)).mean()
+            sig_thres = null_dist[int(sig_lev * sig_samples)]
 
         elif significance == 'fixed':
             sig_thres = fixed_thres
@@ -1426,8 +1426,8 @@ def _get_estimate(array, measure, xyz, measure_params,
 
         # Sort and get quantile
         bootdist.sort()
-        conf_lower = bootdist[(1. - c_int) * conf_samples]
-        conf_upper = bootdist[c_int * conf_samples]
+        conf_lower = bootdist[int((1. - c_int) * conf_samples)]
+        conf_upper = bootdist[int(c_int * conf_samples)]
 
     return {'value': val,
             'pvalue': pval,
@@ -1609,6 +1609,13 @@ def _get_neighbors(nodes, exclude=None):
 
     return graph
 
+def my_abs(val, measure):
+    # CMI measures are non-negative, but their estimate can be
+    # negative
+    if 'cmi' in measure:
+        return val
+    else:
+        return numpy.abs(val)
 
 def _par_corr_trafo(cmi):
     """Transformation of CMI to partial correlation scale.

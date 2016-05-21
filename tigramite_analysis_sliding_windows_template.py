@@ -119,7 +119,7 @@ a = .7
 c1 = .6
 c2 = -.6
 c3 = .8
-T = 1000
+T = 2000
 links_coeffs = {0: [((0, -1), a)],
                 1: [((1, -1), a), ((0, -1), c1)],
                 2: [((2, -1), a), ((1, -2), c2)],
@@ -163,8 +163,8 @@ d = {
     'N': fulldata.shape[1],
     'T': fulldata.shape[0],
     'datatime': datatime,
-    'window_length': 200,
-    'window_steps': 200,
+    'window_length': 500,
+    'window_steps': 500,
 
     # Analyze only masked samples
     # selector_type needs to be a list containing 'x' or 'y'or 'z' or any
@@ -502,7 +502,7 @@ if plot_graph:
         print("Plotting graph")
 
     min_ensemble_frac = .3
-    arrow_linewidth = 5.
+    arrow_linewidth = 30.
 
     # Local params
     cond_types = d['cond_types']
@@ -537,24 +537,24 @@ if plot_graph:
         sig_thres = numpy.zeros((d['N'], d['N'], d['tau_max'] + 1))
         sig_thres[robustness_links < min_ensemble_frac] = numpy.infty
 
-        # Draw line that marks maximum line width
-        x, y = numpy.array([[0.0, 0.05], [0.95, 0.95]])
-        line = matplotlib.lines.Line2D(x, y, lw=arrow_linewidth,
-                                       color='grey', alpha=1.,
-                                       transform=ax.transAxes)
-        ax.add_line(line)
-        pyplot.text(0.08, .92, '100%' + '\n' + 'robust' + '\n' +
-                    r'%.1f' % (min_ensemble_frac * 100.) +
-                    '%', fontsize=6, transform=ax.transAxes,
-                    verticalalignment='center',
-                    horizontalalignment='left')
-        x, y = numpy.array([[0.0, 0.05], [0.89, 0.89]])
-        line = matplotlib.lines.Line2D(x, y,
-                                       lw=min_ensemble_frac * arrow_linewidth,
-                                       color='grey', alpha=1.,
-                                       transform=ax.transAxes)
-        ax.add_line(line)
-
+        # # Draw line that marks maximum line width
+        # x, y = numpy.array([[0.0, 0.05], [0.95, 0.95]])
+        # line = matplotlib.lines.Line2D(x, y, lw=arrow_linewidth,
+        #                                color='grey', alpha=1.,
+        #                                transform=ax.transAxes)
+        # ax.add_line(line)
+        # pyplot.text(0.08, .92, '100%' + '\n' + 'robust' + '\n' +
+        #             r'%.1f' % (min_ensemble_frac * 100.) +
+        #             '%', fontsize=6, transform=ax.transAxes,
+        #             verticalalignment='center',
+        #             horizontalalignment='left')
+        # x, y = numpy.array([[0.0, 0.05], [0.89, 0.89]])
+        # line = matplotlib.lines.Line2D(x, y,
+        #                                lw=min_ensemble_frac * arrow_linewidth,
+        #                                color='grey', alpha=1.,
+        #                                transform=ax.transAxes)
+        # ax.add_line(line)
+        # print robustness_links
         tigramite_plotting.plot_graph(
             fig=fig, ax=ax,
             lagfuncs=lagfuncs,
@@ -576,6 +576,7 @@ if plot_graph:
             cmap_nodes='OrRd',
 
             link_label_fontsize=8,
+            label_fraction=0.4,
             arrow_linewidth=arrow_linewidth,
             arrowhead_size=20,
             curved_radius=.2,
