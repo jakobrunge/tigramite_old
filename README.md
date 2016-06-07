@@ -4,6 +4,7 @@ Version 2.0 beta (release date 2016-04-15)
 
 (Python Package)
 
+[Github download](https://github.com/jakobrunge/tigramite)
 
 ## General Notes
 
@@ -94,4 +95,4 @@ python setup_tigramite_cython_code.py build_ext --inplace
 
 
 
-to compile the code in your system.
+to compile the code on your system.
