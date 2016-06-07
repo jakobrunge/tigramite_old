@@ -250,7 +250,7 @@ d = {
     # 'par_corr' or 'reg' the test is two-sided,
     # such that 0.95 actually corresponds to a 90%
     # significance level
-    # Here the divisor "/ 2." account for a two-sided level
+    # Here the divisor "/ 2." accounts for a two-sided level
     'sig_lev': (1. - .01 / 2.),
 
     # Higher significance levels require a larger

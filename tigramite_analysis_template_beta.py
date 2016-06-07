@@ -68,9 +68,9 @@ from matplotlib import pyplot
 estimate = True
 
 # Plotting functions: the sections below can be flexibly adapted
-plot_time_series = True
-plot_lag_functions = True
-plot_graph = True
+plot_time_series = False
+plot_lag_functions = False
+plot_graph = False
 plot_time_series_graph = True
 
 ###
@@ -116,12 +116,13 @@ matplotlib.rcParams.update(params)
 
 # Test process: Vector-Autoregressive Process, see docs in "pp"-module
 a = .7
+c0=.2
 c1 = .6
 c2 = -.6
 c3 = .8
 T = 1000
-links_coeffs = {0: [((0, -1), a)],
-                1: [((1, -1), a), ((0, -1), c1)],
+links_coeffs = {0: [((0, -1), a), ((1, 0), c0)],
+                1: [((1, -1), a), ((0, -1), c1), ((0, 0), c0)],
                 2: [((2, -1), a), ((1, -2), c2)],
                 3: [((3, -1), a), ((0, -3), c3)],
                 }
@@ -252,7 +253,7 @@ d = {
     # 'par_corr' or 'reg' the test is two-sided,
     # such that 0.95 actually corresponds to a 90%
     # significance level
-    # Here the divisor "/ 2." account for a two-sided level
+    # Here the divisor "/ 2." accounts for a two-sided level
     'sig_lev': (1. - .0001 / 2.),
 
     # Higher significance levels require a larger

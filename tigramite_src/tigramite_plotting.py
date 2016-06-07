@@ -654,6 +654,7 @@ def draw_network_with_curved_edges(
             arrowstyle = arrowstyle
             link_edge = d['directed_edge']
             linestyle = 'solid'
+            linewidth = 0.
         else:
             rad = undirected_curved * curved_radius
             if cmap_links is not None:
@@ -673,11 +674,11 @@ def draw_network_with_curved_edges(
                     edgecolor = standard_color
             width = d['undirected_width']
             alpha = d['undirected_alpha']
-            arrowstyle = '-'
+            arrowstyle = 'simple,head_length=0.0001'
             link_edge = d['undirected_edge']
             linestyle = undirected_style
+            linewidth = 0.
 
-#        print u,v, link_edge
         if link_edge:
             # Outer arrow
             e = FancyArrowPatch(n1.center, n2.center,  # patchA=n1,patchB=n2,
@@ -694,10 +695,10 @@ def draw_network_with_curved_edges(
             ax.add_patch(e)
         # Inner arrow
         e = FancyArrowPatch(n1.center, n2.center,  # patchA=n1,patchB=n2,
-                            arrowstyle=arrowstyle,
+                            arrowstyle= arrowstyle,   #arrowstyle,
                             connectionstyle='arc3,rad=%s' % rad,
                             mutation_scale=width,
-                            lw=0.,
+                            lw=linewidth,
                             alpha=alpha,
                             color=facecolor,
                             clip_on=False,
@@ -1219,7 +1220,6 @@ def plot_time_series_graph(lagfuncs, sig_thres, var_names, fig, ax,
             # value at argmax of average
             dic['directed_color'] = tsg_attr[u, v]
             all_strengths.append(dic['directed_color'])
-
             dic['label'] = None
 
         dic['directed_edge'] = False
