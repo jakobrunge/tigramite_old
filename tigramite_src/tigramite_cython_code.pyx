@@ -69,7 +69,7 @@ def _get_neighbors_within_eps_cython(
         k_z[i] = kz
 
 
-    return k_xz, k_yz, k_z
+    return numpy.asarray(k_xz), numpy.asarray(k_yz), numpy.asarray(k_z)
 
 
 @cython.boundscheck(False)
