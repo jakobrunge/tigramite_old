@@ -1685,9 +1685,16 @@ def _estimate_partial_correlation(array):
 
     (x, y) = _get_residuals(array)
 
-    # val = numpy.dot(x, y) / numpy.sqrt(numpy.dot(x, x) * numpy.dot(y, y))
+    val, pvalwrong = stats.pearsonr(x, y)
+    df = float(T - D)
+    if df < 1:
+        pval = numpy.nan
+    else:
+        # Two-sided p-value accouting for degrees of freedom
+        trafo_val = val*numpy.sqrt(df/(1. - numpy.array([val])**2))
+        pval = stats.t.sf(numpy.abs(trafo_val), df)*2
 
-    return stats.pearsonr(x, y)
+    return val, pval
 
     # Equivalent to
 #        inv_cov_num = linalg.pinv(numpy.corrcoef(array))
