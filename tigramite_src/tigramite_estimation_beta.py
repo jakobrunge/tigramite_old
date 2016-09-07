@@ -1688,6 +1688,7 @@ def _estimate_partial_correlation(array):
     val, pvalwrong = stats.pearsonr(x, y)
     df = float(T - D)
     if df < 1:
+        raise ValueError("D > T: Not enough degrees of freedom!")
         pval = numpy.nan
     else:
         # Two-sided p-value accouting for degrees of freedom
