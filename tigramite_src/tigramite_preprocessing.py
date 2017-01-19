@@ -246,8 +246,7 @@ def ordinal_patt_array(array, array_mask, dim=2, step=1,
                          "array length.")
 
     patt = numpy.zeros((patt_time, N), dtype='int32')
-    if weights:
-        weights_array = numpy.zeros((patt_time, N), dtype='float64')
+    weights_array = numpy.zeros((patt_time, N), dtype='float64')
 
     patt_mask = numpy.zeros((patt_time, N), dtype='int32')
     fac = factorial(numpy.arange(10)).astype('int32')
