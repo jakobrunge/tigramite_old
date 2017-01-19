@@ -1081,6 +1081,18 @@ def _calculate_lag_function(measure, data, sample_selector=None,
             selector_type=selector_type,
             verbosity=verbosity)
 
+        if (measure_params is not None 
+            and 'weights' in measure_params.keys()):
+            measure_params['weights_array'], _ = _construct_array(
+                X=X, Y=Y, Z=Z,
+                tau_max=tau_max,
+                data=measure_params['weights'],
+                selector=selector,
+                sample_selector=sample_selector,
+                selector_type=selector_type,
+                verbosity=verbosity)
+
+
         dim, T_eff = array.shape
         if T_eff < min_samples:
             cmi[tau] = numpy.nan
@@ -1362,8 +1374,13 @@ def _get_estimate(array, measure, xyz, measure_params,
         conf_upper = None
 
     elif measure == 'cmi_symb':
+        if (measure_params is not None
+           and 'weights_array' in measure_params.keys()):
+            weights = measure_params['weights_array']
+        else:
+            weights = None
         val = _estimate_cmi_symb(
-            array=numpy.copy(array), xyz=xyz)
+            array=numpy.copy(array), xyz=xyz, weights=weights)
         pval = None
         sig_thres = None
         conf_lower = None
@@ -1940,13 +1957,14 @@ def _plogp_vector(T, grass=False):
     return numpy.vectorize(plogp_func)
 
 
-def _bincount_hist(symb_array):
+def _bincount_hist(symb_array, weights=None):
     """Computes histogram from symbolic array.
 
     The maximum of the symbolic array determines the alphabet/number of bins.
 
     Args:
         symb_array (int array): Data array of shape (dim, T).
+        weights (float array): weights array of shape (dim, T).
 
     Returns:
         Histogram array of shape (base, base, base, ...)*number of dimensions
@@ -1974,45 +1992,77 @@ def _bincount_hist(symb_array):
 
     flathist = numpy.zeros((bins ** dim), dtype='int16')
     multisymb = numpy.zeros(T, dtype='int64')
+    if weights is not None:
+        flathist = numpy.zeros((bins ** dim), dtype='float32')
+        multiweights = numpy.ones(T, dtype='float32')
 
+    # print numpy.prod(weights, axis=0)
     for i in range(dim):
         multisymb += symb_array[i, :] * bins ** i
+        if weights is not None:
+            multiweights *= weights[i, :]
+            # print i, multiweights
 
-    result = numpy.bincount(multisymb)
+    # print multiweights
+
+    if weights is None:
+        result = numpy.bincount(multisymb)
+        # print result
+    else:
+        result = (numpy.bincount(multisymb, weights=multiweights)
+                  / multiweights.sum())
+
+    # print multiweights
+        # print result.sum()
     flathist[:len(result)] += result
 
     return flathist.reshape(tuple([bins, bins] +
                                   [bins for i in range(dim - 2)])).T
 
 
-def _estimate_cmi_symb(array, xyz):
+def _estimate_cmi_symb(array, xyz, weights=None):
     """Estimates CMI from symbolic array using histograms.
 
     The maximum of the symbolic array determines the alphabet/number of bins.
+    Weights for each symbolic array entry can also be applied.
 
     Args:
         array (array, optional): Data array of shape (dim, T).
         xyz (array): XYZ identifier array of shape (dim,).
+        weights (array, optional): weights array of shape (dim, T).
 
     Returns:
         CMI estimate as float.
     """
+
     maxdim, T = array.shape
 
-    plogp = _plogp_vector(T)
-
     # High-dimensional Histogram
-    hist = _bincount_hist(array)
+    hist = _bincount_hist(array, weights=weights)
 
-    # Entropies by use of vectorized function plogp (either log or
-    # Grassberger's estimator)
-    hxyz = (-(plogp(hist)).sum() + plogp(T)) / float(T)
-    hxz = (-(plogp(hist.sum(axis=1))).sum() + plogp(T)) / \
-        float(T)
-    hyz = (-(plogp(hist.sum(axis=0))).sum() + plogp(T)) / \
-        float(T)
-    hz = (-(plogp(hist.sum(axis=0).sum(axis=0))).sum() +
-          plogp(T)) / float(T)
+    if weights is None:
+        # Entropies by use of vectorized function plogp (either log or
+        # Grassberger's estimator)
+        plogp = _plogp_vector(T)
+
+        hxyz = (-(plogp(hist)).sum() + plogp(T)) / float(T)
+        hxz = (-(plogp(hist.sum(axis=1))).sum() + plogp(T)) / \
+            float(T)
+        hyz = (-(plogp(hist.sum(axis=0))).sum() + plogp(T)) / \
+            float(T)
+        hz = (-(plogp(hist.sum(axis=0).sum(axis=0))).sum() +
+              plogp(T)) / float(T)
+
+    else:
+        def plogp_func(p):
+            if p == 0.: return 0.
+            else: return p*numpy.log(p)
+        plogp = numpy.vectorize(plogp_func)
+
+        hxyz = -plogp(hist).sum()
+        hxz = -plogp(hist.sum(axis=1)).sum()
+        hyz = -plogp(hist.sum(axis=0)).sum()
+        hz = -plogp(hist.sum(axis=0).sum(axis=0)).sum()
 
     ixy_z = hxz + hyz - hz - hxyz
 

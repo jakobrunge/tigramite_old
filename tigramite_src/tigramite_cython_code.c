@@ -1311,6 +1311,9 @@ static CYTHON_INLINE PyObject* __Pyx_PyInt_From_long(long value);
 static PyObject *__pyx_memview_get_int(const char *itemp);
 static int __pyx_memview_set_int(const char *itemp, PyObject *obj);
 
+static PyObject *__pyx_memview_get_double(const char *itemp);
+static int __pyx_memview_set_double(const char *itemp, PyObject *obj);
+
 #if CYTHON_CCOMPLEX
   #ifdef __cplusplus
     #define __Pyx_CREAL(z) ((z).real())
@@ -1580,6 +1583,7 @@ static char __pyx_k_dy[] = "dy";
 static char __pyx_k_dz[] = "dz";
 static char __pyx_k_id[] = "id";
 static char __pyx_k_kz[] = "kz";
+static char __pyx_k_ave[] = "ave";
 static char __pyx_k_dim[] = "dim";
 static char __pyx_k_fac[] = "fac";
 static char __pyx_k_k_z[] = "k_z";
@@ -1587,6 +1591,7 @@ static char __pyx_k_kxz[] = "kxz";
 static char __pyx_k_kyz[] = "kyz";
 static char __pyx_k_obj[] = "obj";
 static char __pyx_k_tau[] = "tau";
+static char __pyx_k_var[] = "var";
 static char __pyx_k_base[] = "base";
 static char __pyx_k_k_xz[] = "k_xz";
 static char __pyx_k_k_yz[] = "k_yz";
@@ -1626,6 +1631,7 @@ static char __pyx_k_unpack[] = "unpack";
 static char __pyx_k_asarray[] = "asarray";
 static char __pyx_k_fortran[] = "fortran";
 static char __pyx_k_memview[] = "memview";
+static char __pyx_k_weights[] = "weights";
 static char __pyx_k_Ellipsis[] = "Ellipsis";
 static char __pyx_k_epsarray[] = "epsarray";
 static char __pyx_k_itemsize[] = "itemsize";
@@ -1705,6 +1711,7 @@ static PyObject *__pyx_n_s_allocate_buffer;
 static PyObject *__pyx_n_s_array;
 static PyObject *__pyx_n_s_array_mask;
 static PyObject *__pyx_n_s_asarray;
+static PyObject *__pyx_n_s_ave;
 static PyObject *__pyx_n_s_base;
 static PyObject *__pyx_n_s_c;
 static PyObject *__pyx_n_u_c;
@@ -1786,9 +1793,11 @@ static PyObject *__pyx_kp_s_unable_to_allocate_shape_and_str;
 static PyObject *__pyx_kp_u_unknown_dtype_code_in_numpy_pxd;
 static PyObject *__pyx_n_s_unpack;
 static PyObject *__pyx_n_s_v;
+static PyObject *__pyx_n_s_var;
+static PyObject *__pyx_n_s_weights;
 static PyObject *__pyx_n_s_zeros;
 static PyObject *__pyx_pf_9tigramite_13tigramite_src_21tigramite_cython_code__get_neighbors_within_eps_cython(CYTHON_UNUSED PyObject *__pyx_self, __Pyx_memviewslice __pyx_v_array, int __pyx_v_T, int __pyx_v_dim_x, int __pyx_v_dim_y, __Pyx_memviewslice __pyx_v_epsarray, CYTHON_UNUSED int __pyx_v_k, int __pyx_v_dim); /* proto */
-static PyObject *__pyx_pf_9tigramite_13tigramite_src_21tigramite_cython_code_2_get_patterns_cython(CYTHON_UNUSED PyObject *__pyx_self, __Pyx_memviewslice __pyx_v_array, __Pyx_memviewslice __pyx_v_array_mask, __Pyx_memviewslice __pyx_v_patt, __Pyx_memviewslice __pyx_v_patt_mask, int __pyx_v_dim, int __pyx_v_step, __Pyx_memviewslice __pyx_v_fac, int __pyx_v_N, int __pyx_v_T); /* proto */
+static PyObject *__pyx_pf_9tigramite_13tigramite_src_21tigramite_cython_code_2_get_patterns_cython(CYTHON_UNUSED PyObject *__pyx_self, __Pyx_memviewslice __pyx_v_array, __Pyx_memviewslice __pyx_v_array_mask, __Pyx_memviewslice __pyx_v_patt, __Pyx_memviewslice __pyx_v_patt_mask, __Pyx_memviewslice __pyx_v_weights, int __pyx_v_dim, int __pyx_v_step, __Pyx_memviewslice __pyx_v_fac, int __pyx_v_N, int __pyx_v_T); /* proto */
 static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, Py_buffer *__pyx_v_info, int __pyx_v_flags); /* proto */
 static void __pyx_pf_5numpy_7ndarray_2__releasebuffer__(PyArrayObject *__pyx_v_self, Py_buffer *__pyx_v_info); /* proto */
 static int __pyx_array___pyx_pf_15View_dot_MemoryView_5array___cinit__(struct __pyx_array_obj *__pyx_v_self, PyObject *__pyx_v_shape, Py_ssize_t __pyx_v_itemsize, PyObject *__pyx_v_format, PyObject *__pyx_v_mode, int __pyx_v_allocate_buffer); /* proto */
@@ -2617,6 +2626,7 @@ static PyObject *__pyx_pw_9tigramite_13tigramite_src_21tigramite_cython_code_3_g
   __Pyx_memviewslice __pyx_v_array_mask = { 0, 0, { 0 }, { 0 }, { 0 } };
   __Pyx_memviewslice __pyx_v_patt = { 0, 0, { 0 }, { 0 }, { 0 } };
   __Pyx_memviewslice __pyx_v_patt_mask = { 0, 0, { 0 }, { 0 }, { 0 } };
+  __Pyx_memviewslice __pyx_v_weights = { 0, 0, { 0 }, { 0 }, { 0 } };
   int __pyx_v_dim;
   int __pyx_v_step;
   __Pyx_memviewslice __pyx_v_fac = { 0, 0, { 0 }, { 0 }, { 0 } };
@@ -2629,12 +2639,13 @@ static PyObject *__pyx_pw_9tigramite_13tigramite_src_21tigramite_cython_code_3_g
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("_get_patterns_cython (wrapper)", 0);
   {
-    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_array,&__pyx_n_s_array_mask,&__pyx_n_s_patt,&__pyx_n_s_patt_mask,&__pyx_n_s_dim,&__pyx_n_s_step,&__pyx_n_s_fac,&__pyx_n_s_N,&__pyx_n_s_T,0};
-    PyObject* values[9] = {0,0,0,0,0,0,0,0,0};
+    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_array,&__pyx_n_s_array_mask,&__pyx_n_s_patt,&__pyx_n_s_patt_mask,&__pyx_n_s_weights,&__pyx_n_s_dim,&__pyx_n_s_step,&__pyx_n_s_fac,&__pyx_n_s_N,&__pyx_n_s_T,0};
+    PyObject* values[10] = {0,0,0,0,0,0,0,0,0,0};
     if (unlikely(__pyx_kwds)) {
       Py_ssize_t kw_args;
       const Py_ssize_t pos_args = PyTuple_GET_SIZE(__pyx_args);
       switch (pos_args) {
+        case 10: values[9] = PyTuple_GET_ITEM(__pyx_args, 9);
         case  9: values[8] = PyTuple_GET_ITEM(__pyx_args, 8);
         case  8: values[7] = PyTuple_GET_ITEM(__pyx_args, 7);
         case  7: values[6] = PyTuple_GET_ITEM(__pyx_args, 6);
@@ -2655,48 +2666,53 @@ static PyObject *__pyx_pw_9tigramite_13tigramite_src_21tigramite_cython_code_3_g
         case  1:
         if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_array_mask)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("_get_patterns_cython", 1, 9, 9, 1); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 77; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+          __Pyx_RaiseArgtupleInvalid("_get_patterns_cython", 1, 10, 10, 1); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 77; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
         }
         case  2:
         if (likely((values[2] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_patt)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("_get_patterns_cython", 1, 9, 9, 2); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 77; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+          __Pyx_RaiseArgtupleInvalid("_get_patterns_cython", 1, 10, 10, 2); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 77; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
         }
         case  3:
         if (likely((values[3] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_patt_mask)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("_get_patterns_cython", 1, 9, 9, 3); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 77; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+          __Pyx_RaiseArgtupleInvalid("_get_patterns_cython", 1, 10, 10, 3); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 77; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
         }
         case  4:
-        if (likely((values[4] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_dim)) != 0)) kw_args--;
+        if (likely((values[4] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_weights)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("_get_patterns_cython", 1, 9, 9, 4); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 77; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+          __Pyx_RaiseArgtupleInvalid("_get_patterns_cython", 1, 10, 10, 4); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 77; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
         }
         case  5:
-        if (likely((values[5] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_step)) != 0)) kw_args--;
+        if (likely((values[5] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_dim)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("_get_patterns_cython", 1, 9, 9, 5); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 77; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+          __Pyx_RaiseArgtupleInvalid("_get_patterns_cython", 1, 10, 10, 5); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 77; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
         }
         case  6:
-        if (likely((values[6] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_fac)) != 0)) kw_args--;
+        if (likely((values[6] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_step)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("_get_patterns_cython", 1, 9, 9, 6); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 77; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+          __Pyx_RaiseArgtupleInvalid("_get_patterns_cython", 1, 10, 10, 6); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 77; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
         }
         case  7:
-        if (likely((values[7] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_N)) != 0)) kw_args--;
+        if (likely((values[7] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_fac)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("_get_patterns_cython", 1, 9, 9, 7); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 77; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+          __Pyx_RaiseArgtupleInvalid("_get_patterns_cython", 1, 10, 10, 7); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 77; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
         }
         case  8:
-        if (likely((values[8] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_T)) != 0)) kw_args--;
+        if (likely((values[8] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_N)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("_get_patterns_cython", 1, 9, 9, 8); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 77; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+          __Pyx_RaiseArgtupleInvalid("_get_patterns_cython", 1, 10, 10, 8); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 77; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+        }
+        case  9:
+        if (likely((values[9] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_T)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("_get_patterns_cython", 1, 10, 10, 9); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 77; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
         }
       }
       if (unlikely(kw_args > 0)) {
         if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "_get_patterns_cython") < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 77; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
       }
-    } else if (PyTuple_GET_SIZE(__pyx_args) != 9) {
+    } else if (PyTuple_GET_SIZE(__pyx_args) != 10) {
       goto __pyx_L5_argtuple_error;
     } else {
       values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
@@ -2708,33 +2724,35 @@ static PyObject *__pyx_pw_9tigramite_13tigramite_src_21tigramite_cython_code_3_g
       values[6] = PyTuple_GET_ITEM(__pyx_args, 6);
       values[7] = PyTuple_GET_ITEM(__pyx_args, 7);
       values[8] = PyTuple_GET_ITEM(__pyx_args, 8);
+      values[9] = PyTuple_GET_ITEM(__pyx_args, 9);
     }
     __pyx_v_array = __Pyx_PyObject_to_MemoryviewSlice_dsds_double(values[0]); if (unlikely(!__pyx_v_array.memview)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 78; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
     __pyx_v_array_mask = __Pyx_PyObject_to_MemoryviewSlice_dsds_int(values[1]); if (unlikely(!__pyx_v_array_mask.memview)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 79; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
     __pyx_v_patt = __Pyx_PyObject_to_MemoryviewSlice_dsds_int(values[2]); if (unlikely(!__pyx_v_patt.memview)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 80; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
     __pyx_v_patt_mask = __Pyx_PyObject_to_MemoryviewSlice_dsds_int(values[3]); if (unlikely(!__pyx_v_patt_mask.memview)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 81; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
-    __pyx_v_dim = __Pyx_PyInt_As_int(values[4]); if (unlikely((__pyx_v_dim == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 82; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
-    __pyx_v_step = __Pyx_PyInt_As_int(values[5]); if (unlikely((__pyx_v_step == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 83; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
-    __pyx_v_fac = __Pyx_PyObject_to_MemoryviewSlice_ds_int(values[6]); if (unlikely(!__pyx_v_fac.memview)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 84; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
-    __pyx_v_N = __Pyx_PyInt_As_int(values[7]); if (unlikely((__pyx_v_N == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 85; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
-    __pyx_v_T = __Pyx_PyInt_As_int(values[8]); if (unlikely((__pyx_v_T == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 86; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+    __pyx_v_weights = __Pyx_PyObject_to_MemoryviewSlice_dsds_double(values[4]); if (unlikely(!__pyx_v_weights.memview)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 82; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+    __pyx_v_dim = __Pyx_PyInt_As_int(values[5]); if (unlikely((__pyx_v_dim == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 83; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+    __pyx_v_step = __Pyx_PyInt_As_int(values[6]); if (unlikely((__pyx_v_step == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 84; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+    __pyx_v_fac = __Pyx_PyObject_to_MemoryviewSlice_ds_int(values[7]); if (unlikely(!__pyx_v_fac.memview)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 85; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+    __pyx_v_N = __Pyx_PyInt_As_int(values[8]); if (unlikely((__pyx_v_N == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 86; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+    __pyx_v_T = __Pyx_PyInt_As_int(values[9]); if (unlikely((__pyx_v_T == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 87; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("_get_patterns_cython", 1, 9, 9, PyTuple_GET_SIZE(__pyx_args)); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 77; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+  __Pyx_RaiseArgtupleInvalid("_get_patterns_cython", 1, 10, 10, PyTuple_GET_SIZE(__pyx_args)); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 77; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
   __pyx_L3_error:;
   __Pyx_AddTraceback("tigramite.tigramite_src.tigramite_cython_code._get_patterns_cython", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
-  __pyx_r = __pyx_pf_9tigramite_13tigramite_src_21tigramite_cython_code_2_get_patterns_cython(__pyx_self, __pyx_v_array, __pyx_v_array_mask, __pyx_v_patt, __pyx_v_patt_mask, __pyx_v_dim, __pyx_v_step, __pyx_v_fac, __pyx_v_N, __pyx_v_T);
+  __pyx_r = __pyx_pf_9tigramite_13tigramite_src_21tigramite_cython_code_2_get_patterns_cython(__pyx_self, __pyx_v_array, __pyx_v_array_mask, __pyx_v_patt, __pyx_v_patt_mask, __pyx_v_weights, __pyx_v_dim, __pyx_v_step, __pyx_v_fac, __pyx_v_N, __pyx_v_T);
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_9tigramite_13tigramite_src_21tigramite_cython_code_2_get_patterns_cython(CYTHON_UNUSED PyObject *__pyx_self, __Pyx_memviewslice __pyx_v_array, __Pyx_memviewslice __pyx_v_array_mask, __Pyx_memviewslice __pyx_v_patt, __Pyx_memviewslice __pyx_v_patt_mask, int __pyx_v_dim, int __pyx_v_step, __Pyx_memviewslice __pyx_v_fac, int __pyx_v_N, int __pyx_v_T) {
+static PyObject *__pyx_pf_9tigramite_13tigramite_src_21tigramite_cython_code_2_get_patterns_cython(CYTHON_UNUSED PyObject *__pyx_self, __Pyx_memviewslice __pyx_v_array, __Pyx_memviewslice __pyx_v_array_mask, __Pyx_memviewslice __pyx_v_patt, __Pyx_memviewslice __pyx_v_patt_mask, __Pyx_memviewslice __pyx_v_weights, int __pyx_v_dim, int __pyx_v_step, __Pyx_memviewslice __pyx_v_fac, int __pyx_v_N, int __pyx_v_T) {
   int __pyx_v_n;
   int __pyx_v_t;
   int __pyx_v_k;
@@ -2744,6 +2762,8 @@ static PyObject *__pyx_pf_9tigramite_13tigramite_src_21tigramite_cython_code_2_g
   int __pyx_v_tau;
   int __pyx_v_start;
   int __pyx_v_mask;
+  double __pyx_v_ave;
+  double __pyx_v_var;
   __Pyx_memviewslice __pyx_v_v = { 0, 0, { 0 }, { 0 }, { 0 } };
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
@@ -2765,56 +2785,60 @@ static PyObject *__pyx_pf_9tigramite_13tigramite_src_21tigramite_cython_code_2_g
   Py_ssize_t __pyx_t_16;
   Py_ssize_t __pyx_t_17;
   Py_ssize_t __pyx_t_18;
-  int __pyx_t_19;
-  int __pyx_t_20;
-  int __pyx_t_21;
+  Py_ssize_t __pyx_t_19;
+  Py_ssize_t __pyx_t_20;
+  Py_ssize_t __pyx_t_21;
   Py_ssize_t __pyx_t_22;
-  Py_ssize_t __pyx_t_23;
-  Py_ssize_t __pyx_t_24;
-  Py_ssize_t __pyx_t_25;
+  int __pyx_t_23;
+  int __pyx_t_24;
+  int __pyx_t_25;
   Py_ssize_t __pyx_t_26;
   Py_ssize_t __pyx_t_27;
   Py_ssize_t __pyx_t_28;
+  Py_ssize_t __pyx_t_29;
+  Py_ssize_t __pyx_t_30;
+  Py_ssize_t __pyx_t_31;
+  Py_ssize_t __pyx_t_32;
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("_get_patterns_cython", 0);
 
-  /* "tigramite/tigramite_src/tigramite_cython_code.pyx":89
- * 
+  /* "tigramite/tigramite_src/tigramite_cython_code.pyx":91
  *     cdef int n, t, k, i, j, p, tau, start, mask
+ *     cdef double ave, var
  *     cdef double[:] v = numpy.zeros(dim, dtype='float')             # <<<<<<<<<<<<<<
  * 
  *     start = step*(dim-1)
  */
-  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_numpy); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 89; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_numpy); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 91; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_zeros); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 89; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_zeros); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 91; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_dim); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 89; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_dim); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 91; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_3 = PyTuple_New(1); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 89; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_3 = PyTuple_New(1); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 91; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_GIVEREF(__pyx_t_1);
   PyTuple_SET_ITEM(__pyx_t_3, 0, __pyx_t_1);
   __pyx_t_1 = 0;
-  __pyx_t_1 = PyDict_New(); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 89; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = PyDict_New(); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 91; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_dtype, __pyx_n_s_float) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 89; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_3, __pyx_t_1); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 89; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_dtype, __pyx_n_s_float) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 91; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_3, __pyx_t_1); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 91; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_5 = __Pyx_PyObject_to_MemoryviewSlice_ds_double(__pyx_t_4);
-  if (unlikely(!__pyx_t_5.memview)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 89; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (unlikely(!__pyx_t_5.memview)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 91; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_v_v = __pyx_t_5;
   __pyx_t_5.memview = NULL;
   __pyx_t_5.data = NULL;
 
-  /* "tigramite/tigramite_src/tigramite_cython_code.pyx":91
+  /* "tigramite/tigramite_src/tigramite_cython_code.pyx":93
  *     cdef double[:] v = numpy.zeros(dim, dtype='float')
  * 
  *     start = step*(dim-1)             # <<<<<<<<<<<<<<
@@ -2823,7 +2847,7 @@ static PyObject *__pyx_pf_9tigramite_13tigramite_src_21tigramite_cython_code_2_g
  */
   __pyx_v_start = (__pyx_v_step * (__pyx_v_dim - 1));
 
-  /* "tigramite/tigramite_src/tigramite_cython_code.pyx":92
+  /* "tigramite/tigramite_src/tigramite_cython_code.pyx":94
  * 
  *     start = step*(dim-1)
  *     for n in range(0, N):             # <<<<<<<<<<<<<<
@@ -2834,29 +2858,38 @@ static PyObject *__pyx_pf_9tigramite_13tigramite_src_21tigramite_cython_code_2_g
   for (__pyx_t_7 = 0; __pyx_t_7 < __pyx_t_6; __pyx_t_7+=1) {
     __pyx_v_n = __pyx_t_7;
 
-    /* "tigramite/tigramite_src/tigramite_cython_code.pyx":93
+    /* "tigramite/tigramite_src/tigramite_cython_code.pyx":95
  *     start = step*(dim-1)
  *     for n in range(0, N):
  *         for t in range(start, T):             # <<<<<<<<<<<<<<
  *             mask = 1
- *             for k in range(0, dim):
+ *             ave = 0.
  */
     __pyx_t_8 = __pyx_v_T;
     for (__pyx_t_9 = __pyx_v_start; __pyx_t_9 < __pyx_t_8; __pyx_t_9+=1) {
       __pyx_v_t = __pyx_t_9;
 
-      /* "tigramite/tigramite_src/tigramite_cython_code.pyx":94
+      /* "tigramite/tigramite_src/tigramite_cython_code.pyx":96
  *     for n in range(0, N):
  *         for t in range(start, T):
  *             mask = 1             # <<<<<<<<<<<<<<
+ *             ave = 0.
  *             for k in range(0, dim):
- *                 tau = k*step
  */
       __pyx_v_mask = 1;
 
-      /* "tigramite/tigramite_src/tigramite_cython_code.pyx":95
+      /* "tigramite/tigramite_src/tigramite_cython_code.pyx":97
  *         for t in range(start, T):
  *             mask = 1
+ *             ave = 0.             # <<<<<<<<<<<<<<
+ *             for k in range(0, dim):
+ *                 tau = k*step
+ */
+      __pyx_v_ave = 0.;
+
+      /* "tigramite/tigramite_src/tigramite_cython_code.pyx":98
+ *             mask = 1
+ *             ave = 0.
  *             for k in range(0, dim):             # <<<<<<<<<<<<<<
  *                 tau = k*step
  *                 v[k] = array[t - tau, n]
@@ -2865,53 +2898,131 @@ static PyObject *__pyx_pf_9tigramite_13tigramite_src_21tigramite_cython_code_2_g
       for (__pyx_t_11 = 0; __pyx_t_11 < __pyx_t_10; __pyx_t_11+=1) {
         __pyx_v_k = __pyx_t_11;
 
-        /* "tigramite/tigramite_src/tigramite_cython_code.pyx":96
- *             mask = 1
+        /* "tigramite/tigramite_src/tigramite_cython_code.pyx":99
+ *             ave = 0.
  *             for k in range(0, dim):
  *                 tau = k*step             # <<<<<<<<<<<<<<
  *                 v[k] = array[t - tau, n]
- *                 mask *= array_mask[t - tau, n]
+ *                 ave += v[k]
  */
         __pyx_v_tau = (__pyx_v_k * __pyx_v_step);
 
-        /* "tigramite/tigramite_src/tigramite_cython_code.pyx":97
+        /* "tigramite/tigramite_src/tigramite_cython_code.pyx":100
  *             for k in range(0, dim):
  *                 tau = k*step
  *                 v[k] = array[t - tau, n]             # <<<<<<<<<<<<<<
+ *                 ave += v[k]
  *                 mask *= array_mask[t - tau, n]
- *             if( v[0] < v[1]):
  */
         __pyx_t_12 = (__pyx_v_t - __pyx_v_tau);
         __pyx_t_13 = __pyx_v_n;
         __pyx_t_14 = __pyx_v_k;
         *((double *) ( /* dim=0 */ (__pyx_v_v.data + __pyx_t_14 * __pyx_v_v.strides[0]) )) = (*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_array.data + __pyx_t_12 * __pyx_v_array.strides[0]) ) + __pyx_t_13 * __pyx_v_array.strides[1]) )));
 
-        /* "tigramite/tigramite_src/tigramite_cython_code.pyx":98
+        /* "tigramite/tigramite_src/tigramite_cython_code.pyx":101
  *                 tau = k*step
  *                 v[k] = array[t - tau, n]
+ *                 ave += v[k]             # <<<<<<<<<<<<<<
+ *                 mask *= array_mask[t - tau, n]
+ *             ave /= dim
+ */
+        __pyx_t_15 = __pyx_v_k;
+        __pyx_v_ave = (__pyx_v_ave + (*((double *) ( /* dim=0 */ (__pyx_v_v.data + __pyx_t_15 * __pyx_v_v.strides[0]) ))));
+
+        /* "tigramite/tigramite_src/tigramite_cython_code.pyx":102
+ *                 v[k] = array[t - tau, n]
+ *                 ave += v[k]
  *                 mask *= array_mask[t - tau, n]             # <<<<<<<<<<<<<<
+ *             ave /= dim
+ *             var = 0.
+ */
+        __pyx_t_16 = (__pyx_v_t - __pyx_v_tau);
+        __pyx_t_17 = __pyx_v_n;
+        __pyx_v_mask = (__pyx_v_mask * (*((int *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_array_mask.data + __pyx_t_16 * __pyx_v_array_mask.strides[0]) ) + __pyx_t_17 * __pyx_v_array_mask.strides[1]) ))));
+      }
+
+      /* "tigramite/tigramite_src/tigramite_cython_code.pyx":103
+ *                 ave += v[k]
+ *                 mask *= array_mask[t - tau, n]
+ *             ave /= dim             # <<<<<<<<<<<<<<
+ *             var = 0.
+ *             for k in range(0, dim):
+ */
+      if (unlikely(__pyx_v_dim == 0)) {
+        PyErr_SetString(PyExc_ZeroDivisionError, "float division");
+        {__pyx_filename = __pyx_f[0]; __pyx_lineno = 103; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      }
+      __pyx_v_ave = (__pyx_v_ave / __pyx_v_dim);
+
+      /* "tigramite/tigramite_src/tigramite_cython_code.pyx":104
+ *                 mask *= array_mask[t - tau, n]
+ *             ave /= dim
+ *             var = 0.             # <<<<<<<<<<<<<<
+ *             for k in range(0, dim):
+ *                 var += (v[k] - ave)**2
+ */
+      __pyx_v_var = 0.;
+
+      /* "tigramite/tigramite_src/tigramite_cython_code.pyx":105
+ *             ave /= dim
+ *             var = 0.
+ *             for k in range(0, dim):             # <<<<<<<<<<<<<<
+ *                 var += (v[k] - ave)**2
+ *             var /= dim
+ */
+      __pyx_t_10 = __pyx_v_dim;
+      for (__pyx_t_11 = 0; __pyx_t_11 < __pyx_t_10; __pyx_t_11+=1) {
+        __pyx_v_k = __pyx_t_11;
+
+        /* "tigramite/tigramite_src/tigramite_cython_code.pyx":106
+ *             var = 0.
+ *             for k in range(0, dim):
+ *                 var += (v[k] - ave)**2             # <<<<<<<<<<<<<<
+ *             var /= dim
+ *             weights[t-start, n] = var
+ */
+        __pyx_t_18 = __pyx_v_k;
+        __pyx_v_var = (__pyx_v_var + pow(((*((double *) ( /* dim=0 */ (__pyx_v_v.data + __pyx_t_18 * __pyx_v_v.strides[0]) ))) - __pyx_v_ave), 2.0));
+      }
+
+      /* "tigramite/tigramite_src/tigramite_cython_code.pyx":107
+ *             for k in range(0, dim):
+ *                 var += (v[k] - ave)**2
+ *             var /= dim             # <<<<<<<<<<<<<<
+ *             weights[t-start, n] = var
+ *             if( v[0] < v[1]):
+ */
+      if (unlikely(__pyx_v_dim == 0)) {
+        PyErr_SetString(PyExc_ZeroDivisionError, "float division");
+        {__pyx_filename = __pyx_f[0]; __pyx_lineno = 107; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      }
+      __pyx_v_var = (__pyx_v_var / __pyx_v_dim);
+
+      /* "tigramite/tigramite_src/tigramite_cython_code.pyx":108
+ *                 var += (v[k] - ave)**2
+ *             var /= dim
+ *             weights[t-start, n] = var             # <<<<<<<<<<<<<<
  *             if( v[0] < v[1]):
  *                 p = 1
  */
-        __pyx_t_15 = (__pyx_v_t - __pyx_v_tau);
-        __pyx_t_16 = __pyx_v_n;
-        __pyx_v_mask = (__pyx_v_mask * (*((int *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_array_mask.data + __pyx_t_15 * __pyx_v_array_mask.strides[0]) ) + __pyx_t_16 * __pyx_v_array_mask.strides[1]) ))));
-      }
+      __pyx_t_19 = (__pyx_v_t - __pyx_v_start);
+      __pyx_t_20 = __pyx_v_n;
+      *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_weights.data + __pyx_t_19 * __pyx_v_weights.strides[0]) ) + __pyx_t_20 * __pyx_v_weights.strides[1]) )) = __pyx_v_var;
 
-      /* "tigramite/tigramite_src/tigramite_cython_code.pyx":99
- *                 v[k] = array[t - tau, n]
- *                 mask *= array_mask[t - tau, n]
+      /* "tigramite/tigramite_src/tigramite_cython_code.pyx":109
+ *             var /= dim
+ *             weights[t-start, n] = var
  *             if( v[0] < v[1]):             # <<<<<<<<<<<<<<
  *                 p = 1
  *             else:
  */
-      __pyx_t_17 = 0;
-      __pyx_t_18 = 1;
-      __pyx_t_19 = (((*((double *) ( /* dim=0 */ (__pyx_v_v.data + __pyx_t_17 * __pyx_v_v.strides[0]) ))) < (*((double *) ( /* dim=0 */ (__pyx_v_v.data + __pyx_t_18 * __pyx_v_v.strides[0]) )))) != 0);
-      if (__pyx_t_19) {
+      __pyx_t_21 = 0;
+      __pyx_t_22 = 1;
+      __pyx_t_23 = (((*((double *) ( /* dim=0 */ (__pyx_v_v.data + __pyx_t_21 * __pyx_v_v.strides[0]) ))) < (*((double *) ( /* dim=0 */ (__pyx_v_v.data + __pyx_t_22 * __pyx_v_v.strides[0]) )))) != 0);
+      if (__pyx_t_23) {
 
-        /* "tigramite/tigramite_src/tigramite_cython_code.pyx":100
- *                 mask *= array_mask[t - tau, n]
+        /* "tigramite/tigramite_src/tigramite_cython_code.pyx":110
+ *             weights[t-start, n] = var
  *             if( v[0] < v[1]):
  *                 p = 1             # <<<<<<<<<<<<<<
  *             else:
@@ -2919,17 +3030,17 @@ static PyObject *__pyx_pf_9tigramite_13tigramite_src_21tigramite_cython_code_2_g
  */
         __pyx_v_p = 1;
 
-        /* "tigramite/tigramite_src/tigramite_cython_code.pyx":99
- *                 v[k] = array[t - tau, n]
- *                 mask *= array_mask[t - tau, n]
+        /* "tigramite/tigramite_src/tigramite_cython_code.pyx":109
+ *             var /= dim
+ *             weights[t-start, n] = var
  *             if( v[0] < v[1]):             # <<<<<<<<<<<<<<
  *                 p = 1
  *             else:
  */
-        goto __pyx_L9;
+        goto __pyx_L11;
       }
 
-      /* "tigramite/tigramite_src/tigramite_cython_code.pyx":102
+      /* "tigramite/tigramite_src/tigramite_cython_code.pyx":112
  *                 p = 1
  *             else:
  *                 p = 0             # <<<<<<<<<<<<<<
@@ -2939,9 +3050,9 @@ static PyObject *__pyx_pf_9tigramite_13tigramite_src_21tigramite_cython_code_2_g
       /*else*/ {
         __pyx_v_p = 0;
       }
-      __pyx_L9:;
+      __pyx_L11:;
 
-      /* "tigramite/tigramite_src/tigramite_cython_code.pyx":103
+      /* "tigramite/tigramite_src/tigramite_cython_code.pyx":113
  *             else:
  *                 p = 0
  *             for i in range(2, dim):             # <<<<<<<<<<<<<<
@@ -2952,40 +3063,40 @@ static PyObject *__pyx_pf_9tigramite_13tigramite_src_21tigramite_cython_code_2_g
       for (__pyx_t_11 = 2; __pyx_t_11 < __pyx_t_10; __pyx_t_11+=1) {
         __pyx_v_i = __pyx_t_11;
 
-        /* "tigramite/tigramite_src/tigramite_cython_code.pyx":104
+        /* "tigramite/tigramite_src/tigramite_cython_code.pyx":114
  *                 p = 0
  *             for i in range(2, dim):
  *                 for j in range(0, i):             # <<<<<<<<<<<<<<
  *                     if( v[j] < v[i]):
  *                         p += fac[i]
  */
-        __pyx_t_20 = __pyx_v_i;
-        for (__pyx_t_21 = 0; __pyx_t_21 < __pyx_t_20; __pyx_t_21+=1) {
-          __pyx_v_j = __pyx_t_21;
+        __pyx_t_24 = __pyx_v_i;
+        for (__pyx_t_25 = 0; __pyx_t_25 < __pyx_t_24; __pyx_t_25+=1) {
+          __pyx_v_j = __pyx_t_25;
 
-          /* "tigramite/tigramite_src/tigramite_cython_code.pyx":105
+          /* "tigramite/tigramite_src/tigramite_cython_code.pyx":115
  *             for i in range(2, dim):
  *                 for j in range(0, i):
  *                     if( v[j] < v[i]):             # <<<<<<<<<<<<<<
  *                         p += fac[i]
  *             patt[t-start, n] = p
  */
-          __pyx_t_22 = __pyx_v_j;
-          __pyx_t_23 = __pyx_v_i;
-          __pyx_t_19 = (((*((double *) ( /* dim=0 */ (__pyx_v_v.data + __pyx_t_22 * __pyx_v_v.strides[0]) ))) < (*((double *) ( /* dim=0 */ (__pyx_v_v.data + __pyx_t_23 * __pyx_v_v.strides[0]) )))) != 0);
-          if (__pyx_t_19) {
+          __pyx_t_26 = __pyx_v_j;
+          __pyx_t_27 = __pyx_v_i;
+          __pyx_t_23 = (((*((double *) ( /* dim=0 */ (__pyx_v_v.data + __pyx_t_26 * __pyx_v_v.strides[0]) ))) < (*((double *) ( /* dim=0 */ (__pyx_v_v.data + __pyx_t_27 * __pyx_v_v.strides[0]) )))) != 0);
+          if (__pyx_t_23) {
 
-            /* "tigramite/tigramite_src/tigramite_cython_code.pyx":106
+            /* "tigramite/tigramite_src/tigramite_cython_code.pyx":116
  *                 for j in range(0, i):
  *                     if( v[j] < v[i]):
  *                         p += fac[i]             # <<<<<<<<<<<<<<
  *             patt[t-start, n] = p
  *             patt_mask[t-start, n] = mask
  */
-            __pyx_t_24 = __pyx_v_i;
-            __pyx_v_p = (__pyx_v_p + (*((int *) ( /* dim=0 */ (__pyx_v_fac.data + __pyx_t_24 * __pyx_v_fac.strides[0]) ))));
+            __pyx_t_28 = __pyx_v_i;
+            __pyx_v_p = (__pyx_v_p + (*((int *) ( /* dim=0 */ (__pyx_v_fac.data + __pyx_t_28 * __pyx_v_fac.strides[0]) ))));
 
-            /* "tigramite/tigramite_src/tigramite_cython_code.pyx":105
+            /* "tigramite/tigramite_src/tigramite_cython_code.pyx":115
  *             for i in range(2, dim):
  *                 for j in range(0, i):
  *                     if( v[j] < v[i]):             # <<<<<<<<<<<<<<
@@ -2996,50 +3107,55 @@ static PyObject *__pyx_pf_9tigramite_13tigramite_src_21tigramite_cython_code_2_g
         }
       }
 
-      /* "tigramite/tigramite_src/tigramite_cython_code.pyx":107
+      /* "tigramite/tigramite_src/tigramite_cython_code.pyx":117
  *                     if( v[j] < v[i]):
  *                         p += fac[i]
  *             patt[t-start, n] = p             # <<<<<<<<<<<<<<
  *             patt_mask[t-start, n] = mask
  * 
  */
-      __pyx_t_25 = (__pyx_v_t - __pyx_v_start);
-      __pyx_t_26 = __pyx_v_n;
-      *((int *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_patt.data + __pyx_t_25 * __pyx_v_patt.strides[0]) ) + __pyx_t_26 * __pyx_v_patt.strides[1]) )) = __pyx_v_p;
+      __pyx_t_29 = (__pyx_v_t - __pyx_v_start);
+      __pyx_t_30 = __pyx_v_n;
+      *((int *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_patt.data + __pyx_t_29 * __pyx_v_patt.strides[0]) ) + __pyx_t_30 * __pyx_v_patt.strides[1]) )) = __pyx_v_p;
 
-      /* "tigramite/tigramite_src/tigramite_cython_code.pyx":108
+      /* "tigramite/tigramite_src/tigramite_cython_code.pyx":118
  *                         p += fac[i]
  *             patt[t-start, n] = p
  *             patt_mask[t-start, n] = mask             # <<<<<<<<<<<<<<
  * 
- *     return (patt, patt_mask)
+ *     return (patt, patt_mask, weights)
  */
-      __pyx_t_27 = (__pyx_v_t - __pyx_v_start);
-      __pyx_t_28 = __pyx_v_n;
-      *((int *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_patt_mask.data + __pyx_t_27 * __pyx_v_patt_mask.strides[0]) ) + __pyx_t_28 * __pyx_v_patt_mask.strides[1]) )) = __pyx_v_mask;
+      __pyx_t_31 = (__pyx_v_t - __pyx_v_start);
+      __pyx_t_32 = __pyx_v_n;
+      *((int *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_patt_mask.data + __pyx_t_31 * __pyx_v_patt_mask.strides[0]) ) + __pyx_t_32 * __pyx_v_patt_mask.strides[1]) )) = __pyx_v_mask;
     }
   }
 
-  /* "tigramite/tigramite_src/tigramite_cython_code.pyx":110
+  /* "tigramite/tigramite_src/tigramite_cython_code.pyx":120
  *             patt_mask[t-start, n] = mask
  * 
- *     return (patt, patt_mask)             # <<<<<<<<<<<<<<
+ *     return (patt, patt_mask, weights)             # <<<<<<<<<<<<<<
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_4 = __pyx_memoryview_fromslice(__pyx_v_patt, 2, (PyObject *(*)(char *)) __pyx_memview_get_int, (int (*)(char *, PyObject *)) __pyx_memview_set_int, 0);; if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 110; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_4 = __pyx_memoryview_fromslice(__pyx_v_patt, 2, (PyObject *(*)(char *)) __pyx_memview_get_int, (int (*)(char *, PyObject *)) __pyx_memview_set_int, 0);; if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 120; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_patt_mask, 2, (PyObject *(*)(char *)) __pyx_memview_get_int, (int (*)(char *, PyObject *)) __pyx_memview_set_int, 0);; if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 110; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_patt_mask, 2, (PyObject *(*)(char *)) __pyx_memview_get_int, (int (*)(char *, PyObject *)) __pyx_memview_set_int, 0);; if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 120; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_3 = PyTuple_New(2); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 110; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_3 = __pyx_memoryview_fromslice(__pyx_v_weights, 2, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 120; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_3);
+  __pyx_t_2 = PyTuple_New(3); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 120; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_2);
   __Pyx_GIVEREF(__pyx_t_4);
-  PyTuple_SET_ITEM(__pyx_t_3, 0, __pyx_t_4);
+  PyTuple_SET_ITEM(__pyx_t_2, 0, __pyx_t_4);
   __Pyx_GIVEREF(__pyx_t_1);
-  PyTuple_SET_ITEM(__pyx_t_3, 1, __pyx_t_1);
+  PyTuple_SET_ITEM(__pyx_t_2, 1, __pyx_t_1);
+  __Pyx_GIVEREF(__pyx_t_3);
+  PyTuple_SET_ITEM(__pyx_t_2, 2, __pyx_t_3);
   __pyx_t_4 = 0;
   __pyx_t_1 = 0;
-  __pyx_r = __pyx_t_3;
   __pyx_t_3 = 0;
+  __pyx_r = __pyx_t_2;
+  __pyx_t_2 = 0;
   goto __pyx_L0;
 
   /* "tigramite/tigramite_src/tigramite_cython_code.pyx":77
@@ -3065,6 +3181,7 @@ static PyObject *__pyx_pf_9tigramite_13tigramite_src_21tigramite_cython_code_2_g
   __PYX_XDEC_MEMVIEW(&__pyx_v_array_mask, 1);
   __PYX_XDEC_MEMVIEW(&__pyx_v_patt, 1);
   __PYX_XDEC_MEMVIEW(&__pyx_v_patt_mask, 1);
+  __PYX_XDEC_MEMVIEW(&__pyx_v_weights, 1);
   __PYX_XDEC_MEMVIEW(&__pyx_v_fac, 1);
   __Pyx_XGIVEREF(__pyx_r);
   __Pyx_RefNannyFinishContext();
@@ -17445,6 +17562,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_array, __pyx_k_array, sizeof(__pyx_k_array), 0, 0, 1, 1},
   {&__pyx_n_s_array_mask, __pyx_k_array_mask, sizeof(__pyx_k_array_mask), 0, 0, 1, 1},
   {&__pyx_n_s_asarray, __pyx_k_asarray, sizeof(__pyx_k_asarray), 0, 0, 1, 1},
+  {&__pyx_n_s_ave, __pyx_k_ave, sizeof(__pyx_k_ave), 0, 0, 1, 1},
   {&__pyx_n_s_base, __pyx_k_base, sizeof(__pyx_k_base), 0, 0, 1, 1},
   {&__pyx_n_s_c, __pyx_k_c, sizeof(__pyx_k_c), 0, 0, 1, 1},
   {&__pyx_n_u_c, __pyx_k_c, sizeof(__pyx_k_c), 0, 1, 0, 1},
@@ -17526,6 +17644,8 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_kp_u_unknown_dtype_code_in_numpy_pxd, __pyx_k_unknown_dtype_code_in_numpy_pxd, sizeof(__pyx_k_unknown_dtype_code_in_numpy_pxd), 0, 1, 0, 0},
   {&__pyx_n_s_unpack, __pyx_k_unpack, sizeof(__pyx_k_unpack), 0, 0, 1, 1},
   {&__pyx_n_s_v, __pyx_k_v, sizeof(__pyx_k_v), 0, 0, 1, 1},
+  {&__pyx_n_s_var, __pyx_k_var, sizeof(__pyx_k_var), 0, 0, 1, 1},
+  {&__pyx_n_s_weights, __pyx_k_weights, sizeof(__pyx_k_weights), 0, 0, 1, 1},
   {&__pyx_n_s_zeros, __pyx_k_zeros, sizeof(__pyx_k_zeros), 0, 0, 1, 1},
   {0, 0, 0, 0, 0, 0, 0}
 };
@@ -17779,10 +17899,10 @@ static int __Pyx_InitCachedConstants(void) {
  *     double[:,:] array,
  *     int[:,:] array_mask,
  */
-  __pyx_tuple__22 = PyTuple_Pack(19, __pyx_n_s_array, __pyx_n_s_array_mask, __pyx_n_s_patt, __pyx_n_s_patt_mask, __pyx_n_s_dim, __pyx_n_s_step, __pyx_n_s_fac, __pyx_n_s_N, __pyx_n_s_T, __pyx_n_s_n, __pyx_n_s_t, __pyx_n_s_k, __pyx_n_s_i, __pyx_n_s_j, __pyx_n_s_p, __pyx_n_s_tau, __pyx_n_s_start, __pyx_n_s_mask, __pyx_n_s_v); if (unlikely(!__pyx_tuple__22)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 77; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_tuple__22 = PyTuple_Pack(22, __pyx_n_s_array, __pyx_n_s_array_mask, __pyx_n_s_patt, __pyx_n_s_patt_mask, __pyx_n_s_weights, __pyx_n_s_dim, __pyx_n_s_step, __pyx_n_s_fac, __pyx_n_s_N, __pyx_n_s_T, __pyx_n_s_n, __pyx_n_s_t, __pyx_n_s_k, __pyx_n_s_i, __pyx_n_s_j, __pyx_n_s_p, __pyx_n_s_tau, __pyx_n_s_start, __pyx_n_s_mask, __pyx_n_s_ave, __pyx_n_s_var, __pyx_n_s_v); if (unlikely(!__pyx_tuple__22)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 77; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_tuple__22);
   __Pyx_GIVEREF(__pyx_tuple__22);
-  __pyx_codeobj__23 = (PyObject*)__Pyx_PyCode_New(9, 0, 19, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__22, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_home_jakobrunge_work_code_pytho, __pyx_n_s_get_patterns_cython, 77, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__23)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 77; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_codeobj__23 = (PyObject*)__Pyx_PyCode_New(10, 0, 22, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__22, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_home_jakobrunge_work_code_pytho, __pyx_n_s_get_patterns_cython, 77, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__23)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 77; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
 
   /* "View.MemoryView":278
  *         return self.name
@@ -20714,6 +20834,17 @@ static int __pyx_memview_set_int(const char *itemp, PyObject *obj) {
     if ((value == (int)-1) && PyErr_Occurred())
         return 0;
     *(int *) itemp = value;
+    return 1;
+}
+
+static PyObject *__pyx_memview_get_double(const char *itemp) {
+    return (PyObject *) PyFloat_FromDouble(*(double *) itemp);
+}
+static int __pyx_memview_set_double(const char *itemp, PyObject *obj) {
+    double value = __pyx_PyFloat_AsDouble(obj);
+    if ((value == (double)-1) && PyErr_Occurred())
+        return 0;
+    *(double *) itemp = value;
     return 1;
 }
 

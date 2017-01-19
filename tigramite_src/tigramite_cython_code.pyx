@@ -79,6 +79,7 @@ def _get_patterns_cython(
     int[:,:] array_mask,
     int[:,:] patt,
     int[:,:] patt_mask,
+    double[:,:] weights,
     int dim,
     int step,
     int[:] fac,
@@ -86,16 +87,25 @@ def _get_patterns_cython(
     int T):
 
     cdef int n, t, k, i, j, p, tau, start, mask
+    cdef double ave, var
     cdef double[:] v = numpy.zeros(dim, dtype='float')
 
     start = step*(dim-1)
     for n in range(0, N):
         for t in range(start, T):
             mask = 1
+            ave = 0.
             for k in range(0, dim):
                 tau = k*step
                 v[k] = array[t - tau, n]
+                ave += v[k]
                 mask *= array_mask[t - tau, n]
+            ave /= dim
+            var = 0.
+            for k in range(0, dim):
+                var += (v[k] - ave)**2
+            var /= dim
+            weights[t-start, n] = var
             if( v[0] < v[1]):
                 p = 1
             else:
@@ -107,4 +117,4 @@ def _get_patterns_cython(
             patt[t-start, n] = p
             patt_mask[t-start, n] = mask
 
-    return (patt, patt_mask)
+    return (patt, patt_mask, weights)

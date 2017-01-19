@@ -232,7 +232,7 @@ d = {
     'max_trials': 10,
 
     # True for solid links as defined in Runge PRL + PRE (2012)
-    # Recommended is  "True".
+    # Recommended is  "False".
     'solid_contemp_links': False,
 
     # Significance testing in algorithm and lag functions estimation
@@ -254,7 +254,7 @@ d = {
     # such that 0.95 actually corresponds to a 90%
     # significance level
     # Here the divisor "/ 2." accounts for a two-sided level
-    'sig_lev': (1. - .0001 / 2.),
+    'sig_lev': (1. - .01 / 2.),
 
     # Higher significance levels require a larger
     # number of shuffle test samples, i.e. 0.9 needs

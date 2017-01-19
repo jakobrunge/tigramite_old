@@ -200,7 +200,8 @@ def time_bin_with_mask(data, time_bin_length, sample_selector=None):
     return (bindata.squeeze(), T)
 
 
-def ordinal_patt_array(array, array_mask, dim=2, step=1, verbosity=0):
+def ordinal_patt_array(array, array_mask, dim=2, step=1, 
+                        weights=False, verbosity=0):
     """Returns symbolified array of ordinal patterns.
 
     Each data vector (X_t, ..., X_t+(dim-1)*step) is converted to its rank
@@ -219,6 +220,8 @@ def ordinal_patt_array(array, array_mask, dim=2, step=1, verbosity=0):
             samples.
         dim (int, optional): Pattern dimension
         step (int, optional): Delay of pattern embedding vector.
+        weights (bool, optional): Whether to return array of variances of 
+            embedding vectors as weights.
         verbosity (int, optional): Level of verbosity.
 
     Returns:
@@ -243,17 +246,25 @@ def ordinal_patt_array(array, array_mask, dim=2, step=1, verbosity=0):
                          "array length.")
 
     patt = numpy.zeros((patt_time, N), dtype='int32')
+    if weights:
+        weights_array = numpy.zeros((patt_time, N), dtype='float64')
+
     patt_mask = numpy.zeros((patt_time, N), dtype='int32')
     fac = factorial(numpy.arange(10)).astype('int32')
 
-    (patt, patt_mask) = tigramite_cython_code._get_patterns_cython(
-        array, array_mask, patt, patt_mask, dim, step, fac, N, 
+
+    (patt, patt_mask, weights_array) = tigramite_cython_code._get_patterns_cython(
+        array, array_mask, patt, patt_mask, weights_array, dim, step, fac, N, 
         T)
 
+    weights_array = numpy.asarray(weights_array)
     patt = numpy.asarray(patt)
     patt_mask = numpy.asarray(patt_mask)
 
-    return (patt, patt_mask, patt_time)
+    if weights:
+        return (patt, patt_mask, patt_time, weights_array)
+    else:
+        return (patt, patt_mask, patt_time)
 
 
 def quantile_bin_array(data, bins=6):
