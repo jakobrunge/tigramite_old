@@ -1,5 +1,6 @@
-# TIGRAMITE – TIME SERIES GRAPH BASED MEASURES OF INFORMATION TRANSFER
+# Version 3.0 described in http://arxiv.org/abs/1702.07007 coming soon!
 
+# TIGRAMITE – TIME SERIES GRAPH BASED MEASURES OF INFORMATION TRANSFER
 Version 2.0 beta (release date 2016-04-15)
 
 (Python Package)

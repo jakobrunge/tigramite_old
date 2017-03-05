@@ -238,6 +238,19 @@ def ordinal_patt_array(array, array_mask, dim=2, step=1,
                           " compile cython code first as described in Readme.")
 
     array = array.astype('float64')
+
+    assert array_mask.dtype == 'int32'
+
+    if numpy.ndim(array) == 1:
+        T = len(array)
+        array = array.reshape(T, 1)
+        array_mask = array_mask.reshape(T, 1)
+
+    # Add noise to destroy ties...
+    array += (1E-6 * array.std(axis=0)
+              * numpy.random.rand(array.shape[0], array.shape[1]).astype('float64'))
+
+
     patt_time = int(array.shape[0] - step * (dim - 1))
     T, N = array.shape
 
@@ -249,6 +262,9 @@ def ordinal_patt_array(array, array_mask, dim=2, step=1,
     weights_array = numpy.zeros((patt_time, N), dtype='float64')
 
     patt_mask = numpy.zeros((patt_time, N), dtype='int32')
+
+    # Precompute factorial for c-code... patterns of dimension 
+    # larger than 10 are not supported
     fac = factorial(numpy.arange(10)).astype('int32')
 
 
@@ -430,3 +446,4 @@ class Logger(object):
     def write(self, message):
         self.terminal.write(message)
         self.log += message  # .write(message)
+
